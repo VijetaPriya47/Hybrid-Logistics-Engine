@@ -152,6 +152,8 @@ services:
     depends_on:
       - api-gateway
 
+# Named volumes keep MongoDB and Postgres data across `docker compose down` / image rebuilds.
+# In production, prefer managed databases (e.g. Atlas, RDS) via MONGODB_URI and DATABASE_URL—data persists with the provider.
 volumes:
   mongodb_data:
   postgres_data:

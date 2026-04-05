@@ -1098,8 +1098,10 @@ type ListLedgerRequest struct {
 	FilterPackageSlug   string                 `protobuf:"bytes,5,opt,name=filter_package_slug,json=filterPackageSlug,proto3" json:"filter_package_slug,omitempty"`
 	FilterRiderUserId   string                 `protobuf:"bytes,6,opt,name=filter_rider_user_id,json=filterRiderUserId,proto3" json:"filter_rider_user_id,omitempty"`
 	FilterDriverUserId  string                 `protobuf:"bytes,7,opt,name=filter_driver_user_id,json=filterDriverUserId,proto3" json:"filter_driver_user_id,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// Skip this many rows (newest first). Capped server-side.
+	Offset        int32 `protobuf:"varint,8,opt,name=offset,proto3" json:"offset,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListLedgerRequest) Reset() {
@@ -1181,9 +1183,18 @@ func (x *ListLedgerRequest) GetFilterDriverUserId() string {
 	return ""
 }
 
+func (x *ListLedgerRequest) GetOffset() int32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
 type ListLedgerResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Rows          []*LedgerRow           `protobuf:"bytes,1,rep,name=rows,proto3" json:"rows,omitempty"`
+	TotalCount    int64                  `protobuf:"varint,2,opt,name=total_count,json=totalCount,proto3" json:"total_count,omitempty"`
+	HasMore       bool                   `protobuf:"varint,3,opt,name=has_more,json=hasMore,proto3" json:"has_more,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1223,6 +1234,20 @@ func (x *ListLedgerResponse) GetRows() []*LedgerRow {
 		return x.Rows
 	}
 	return nil
+}
+
+func (x *ListLedgerResponse) GetTotalCount() int64 {
+	if x != nil {
+		return x.TotalCount
+	}
+	return 0
+}
+
+func (x *ListLedgerResponse) GetHasMore() bool {
+	if x != nil {
+		return x.HasMore
+	}
+	return false
 }
 
 var File_finance_proto protoreflect.FileDescriptor
@@ -1317,7 +1342,7 @@ const file_finance_proto_rawDesc = "" +
 	"\x0esource_trip_id\x18\t \x01(\tR\fsourceTripId\x12!\n" +
 	"\fpackage_slug\x18\n" +
 	" \x01(\tR\vpackageSlug\x12,\n" +
-	"\x12created_at_rfc3339\x18\v \x01(\tR\x10createdAtRfc3339\"\xbd\x02\n" +
+	"\x12created_at_rfc3339\x18\v \x01(\tR\x10createdAtRfc3339\"\xd5\x02\n" +
 	"\x11ListLedgerRequest\x12\x14\n" +
 	"\x05limit\x18\x01 \x01(\x05R\x05limit\x12$\n" +
 	"\x0efilter_user_id\x18\x02 \x01(\tR\ffilterUserId\x12$\n" +
@@ -1325,9 +1350,13 @@ const file_finance_proto_rawDesc = "" +
 	"\x15filter_email_contains\x18\x04 \x01(\tR\x13filterEmailContains\x12.\n" +
 	"\x13filter_package_slug\x18\x05 \x01(\tR\x11filterPackageSlug\x12/\n" +
 	"\x14filter_rider_user_id\x18\x06 \x01(\tR\x11filterRiderUserId\x121\n" +
-	"\x15filter_driver_user_id\x18\a \x01(\tR\x12filterDriverUserId\"<\n" +
+	"\x15filter_driver_user_id\x18\a \x01(\tR\x12filterDriverUserId\x12\x16\n" +
+	"\x06offset\x18\b \x01(\x05R\x06offset\"x\n" +
 	"\x12ListLedgerResponse\x12&\n" +
-	"\x04rows\x18\x01 \x03(\v2\x12.finance.LedgerRowR\x04rows2\xb8\x04\n" +
+	"\x04rows\x18\x01 \x03(\v2\x12.finance.LedgerRowR\x04rows\x12\x1f\n" +
+	"\vtotal_count\x18\x02 \x01(\x03R\n" +
+	"totalCount\x12\x19\n" +
+	"\bhas_more\x18\x03 \x01(\bR\ahasMore2\xb8\x04\n" +
 	"\x0eFinanceService\x12Z\n" +
 	"\x11GetMyTransactions\x12!.finance.GetMyTransactionsRequest\x1a\".finance.GetMyTransactionsResponse\x12c\n" +
 	"\x14GetCustomerDashboard\x12$.finance.GetCustomerDashboardRequest\x1a%.finance.GetCustomerDashboardResponse\x12W\n" +

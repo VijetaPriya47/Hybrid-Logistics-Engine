@@ -16,7 +16,7 @@ type LedgerRepository interface {
 	GlobalRevenue(ctx context.Context, from, to *time.Time, trendGran string) (total int64, currency string, trend []*pb.RevenuePoint, err error)
 	RegionalAnalytics(ctx context.Context, from, to *time.Time) ([]*pb.RegionTotal, string, error)
 	CategoryInsights(ctx context.Context, from, to *time.Time) ([]*pb.CategoryInsight, string, error)
-	ListLedger(ctx context.Context, req *pb.ListLedgerRequest) ([]*pb.LedgerRow, error)
+	ListLedger(ctx context.Context, req *pb.ListLedgerRequest) (*pb.ListLedgerResponse, error)
 }
 
 // FinanceService is the application API used by gRPC and AMQP consumers.
@@ -28,5 +28,5 @@ type FinanceService interface {
 	GlobalRevenue(ctx context.Context, from, to *time.Time, trendGran string) (total int64, currency string, trend []*pb.RevenuePoint, err error)
 	RegionalAnalytics(ctx context.Context, from, to *time.Time) ([]*pb.RegionTotal, string, error)
 	CategoryInsights(ctx context.Context, from, to *time.Time) ([]*pb.CategoryInsight, string, error)
-	ListLedger(ctx context.Context, req *pb.ListLedgerRequest) ([]*pb.LedgerRow, error)
+	ListLedger(ctx context.Context, req *pb.ListLedgerRequest) (*pb.ListLedgerResponse, error)
 }

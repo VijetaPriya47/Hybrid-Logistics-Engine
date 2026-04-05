@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strconv"
 	"strings"
@@ -316,46 +317,72 @@ FROM transactions WHERE user_id = $1 ORDER BY created_at DESC LIMIT $2
 	return income, expense, net, currency, series, recent, rrows.Err()
 }
 
-func (r *PostgresLedger) ListLedger(ctx context.Context, req *pb.ListLedgerRequest) ([]*pb.LedgerRow, error) {
+func buildLedgerListWhere(req *pb.ListLedgerRequest) (where string, args []any) {
+	where = "WHERE 1=1"
+	args = []any{}
+	if id := strings.TrimSpace(req.GetFilterUserId()); id != "" {
+		args = append(args, id)
+		where += ` AND t.user_id = $` + strconv.Itoa(len(args))
+	}
+	if tid := strings.TrimSpace(req.GetFilterTripId()); tid != "" {
+		args = append(args, tid)
+		where += ` AND t.source_trip_id = $` + strconv.Itoa(len(args))
+	}
+	if em := strings.TrimSpace(req.GetFilterEmailContains()); em != "" {
+		args = append(args, "%"+em+"%")
+		where += ` AND u.email ILIKE $` + strconv.Itoa(len(args))
+	}
+	if pkg := strings.TrimSpace(req.GetFilterPackageSlug()); pkg != "" {
+		args = append(args, strings.ToLower(pkg))
+		where += ` AND lower(COALESCE(t.package_slug,'')) = $` + strconv.Itoa(len(args))
+	}
+	if rid := strings.TrimSpace(req.GetFilterRiderUserId()); rid != "" {
+		args = append(args, rid)
+		where += ` AND t.type = 'debit' AND t.user_id = $` + strconv.Itoa(len(args))
+	}
+	if did := strings.TrimSpace(req.GetFilterDriverUserId()); did != "" {
+		args = append(args, did)
+		where += ` AND t.type = 'credit' AND t.user_id = $` + strconv.Itoa(len(args))
+	}
+	return where, args
+}
+
+func (r *PostgresLedger) ListLedger(ctx context.Context, req *pb.ListLedgerRequest) (*pb.ListLedgerResponse, error) {
 	limit := req.GetLimit()
 	if limit <= 0 || limit > 500 {
 		limit = 100
 	}
-	q := `
-SELECT t.id::text, t.user_id, COALESCE(u.email,''), t.amount_cents, t.currency, t.type, t.region, t.status,
-COALESCE(t.source_trip_id,''), COALESCE(t.package_slug,''), t.created_at
+	offset := req.GetOffset()
+	if offset < 0 {
+		offset = 0
+	}
+	const maxLedgerOffset int32 = 100_000
+	if offset > maxLedgerOffset {
+		offset = maxLedgerOffset
+	}
+
+	whereSQL, filterArgs := buildLedgerListWhere(req)
+	from := `
 FROM transactions t
 LEFT JOIN users u ON u.id::text = t.user_id
-WHERE 1=1`
-	args := []any{}
-	if id := strings.TrimSpace(req.GetFilterUserId()); id != "" {
-		args = append(args, id)
-		q += ` AND t.user_id = $` + strconv.Itoa(len(args))
-	}
-	if tid := strings.TrimSpace(req.GetFilterTripId()); tid != "" {
-		args = append(args, tid)
-		q += ` AND t.source_trip_id = $` + strconv.Itoa(len(args))
-	}
-	if em := strings.TrimSpace(req.GetFilterEmailContains()); em != "" {
-		args = append(args, "%"+em+"%")
-		q += ` AND u.email ILIKE $` + strconv.Itoa(len(args))
-	}
-	if pkg := strings.TrimSpace(req.GetFilterPackageSlug()); pkg != "" {
-		args = append(args, strings.ToLower(pkg))
-		q += ` AND lower(COALESCE(t.package_slug,'')) = $` + strconv.Itoa(len(args))
-	}
-	if rid := strings.TrimSpace(req.GetFilterRiderUserId()); rid != "" {
-		args = append(args, rid)
-		q += ` AND t.type = 'debit' AND t.user_id = $` + strconv.Itoa(len(args))
-	}
-	if did := strings.TrimSpace(req.GetFilterDriverUserId()); did != "" {
-		args = append(args, did)
-		q += ` AND t.type = 'credit' AND t.user_id = $` + strconv.Itoa(len(args))
-	}
-	args = append(args, limit)
-	q += ` ORDER BY t.created_at DESC LIMIT $` + strconv.Itoa(len(args))
+` + whereSQL
 
-	rows, err := r.Pool.Query(ctx, q, args...)
+	countQ := `SELECT COUNT(*)` + from
+	var total int64
+	if err := r.Pool.QueryRow(ctx, countQ, filterArgs...).Scan(&total); err != nil {
+		return nil, err
+	}
+
+	offArg := len(filterArgs) + 1
+	limArg := len(filterArgs) + 2
+	selectQ := fmt.Sprintf(`
+SELECT t.id::text, t.user_id, COALESCE(u.email,''), t.amount_cents, t.currency, t.type, t.region, t.status,
+COALESCE(t.source_trip_id,''), COALESCE(t.package_slug,''), t.created_at
+%s
+ORDER BY t.created_at DESC OFFSET $%d LIMIT $%d`, from, offArg, limArg)
+
+	selectArgs := append(append([]any{}, filterArgs...), offset, limit)
+	rows, err := r.Pool.Query(ctx, selectQ, selectArgs...)
 	if err != nil {
 		return nil, err
 	}
@@ -370,5 +397,9 @@ WHERE 1=1`
 		lr.CreatedAtRfc3339 = ts.UTC().Format(time.RFC3339)
 		out = append(out, &lr)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	hasMore := int64(offset)+int64(len(out)) < total
+	return &pb.ListLedgerResponse{Rows: out, TotalCount: total, HasMore: hasMore}, nil
 }

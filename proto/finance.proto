@@ -134,8 +134,12 @@ message ListLedgerRequest {
   string filter_package_slug = 5;
   string filter_rider_user_id = 6;
   string filter_driver_user_id = 7;
+  // Skip this many rows (newest first). Capped server-side.
+  int32 offset = 8;
 }
 
 message ListLedgerResponse {
   repeated LedgerRow rows = 1;
+  int64 total_count = 2;
+  bool has_more = 3;
 }

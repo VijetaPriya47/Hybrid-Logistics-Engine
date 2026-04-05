@@ -57,8 +57,18 @@ func handleAdminTransactions(w http.ResponseWriter, r *http.Request, fin *grpc_c
 			limit = int32(n)
 		}
 	}
+	offset := int32(0)
+	if v := q.Get("offset"); v != "" {
+		if n, err := strconv.ParseInt(v, 10, 32); err == nil && n >= 0 {
+			if n > 100_000 {
+				n = 100_000
+			}
+			offset = int32(n)
+		}
+	}
 	resp, err := fin.Client.ListLedger(context.Background(), &pbf.ListLedgerRequest{
 		Limit:               limit,
+		Offset:              offset,
 		FilterUserId:        q.Get("user_id"),
 		FilterTripId:        q.Get("trip_id"),
 		FilterEmailContains: q.Get("email"),

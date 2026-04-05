@@ -112,9 +112,9 @@ func (h *financeHandler) GetCustomerDashboard(ctx context.Context, req *pb.GetCu
 }
 
 func (h *financeHandler) ListLedger(ctx context.Context, req *pb.ListLedgerRequest) (*pb.ListLedgerResponse, error) {
-	rows, err := h.svc.ListLedger(ctx, req)
+	out, err := h.svc.ListLedger(ctx, req)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "%v", err)
 	}
-	return &pb.ListLedgerResponse{Rows: rows}, nil
+	return out, nil
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"ride-sharing/services/platform-service/internal/domain"
@@ -33,6 +34,19 @@ func (s *authService) EnsureBootstrap(ctx context.Context) error {
 	)
 }
 
+// configuredSuperAdminEmail is the bootstrap admin (SUPER_ADMIN_EMAIL); same default as EnsureBootstrap.
+func configuredSuperAdminEmail() string {
+	return strings.ToLower(strings.TrimSpace(env.GetString("SUPER_ADMIN_EMAIL", "vijeta.admin@ridesync.com")))
+}
+
+func isConfiguredSuperAdminEmail(email string) bool {
+	super := configuredSuperAdminEmail()
+	if super == "" || email == "" {
+		return false
+	}
+	return strings.EqualFold(strings.TrimSpace(email), super)
+}
+
 func (s *authService) jwtForUser(u *domain.User) (string, error) {
 	secret := []byte(env.GetString("JWT_SECRET", "dev-insecure-change-me"))
 	iss := env.GetString("JWT_ISSUER", "ridesync-auth")
@@ -45,7 +59,11 @@ func (s *authService) jwtForUser(u *domain.User) (string, error) {
 	}
 	cca, cdd := false, false
 	if u.Role == authjwt.RoleAdmin {
-		cca, cdd = u.CanCreateAdmins, u.CanDeleteData
+		if isConfiguredSuperAdminEmail(u.Email) {
+			cca, cdd = true, true
+		} else {
+			cca, cdd = u.CanCreateAdmins, u.CanDeleteData
+		}
 	}
 	return authjwt.Sign(secret, iss, aud, u.ID, u.Email, u.Role, ttl, cca, cdd)
 }
@@ -70,6 +88,10 @@ func (s *authService) LoginLocal(ctx context.Context, email, password string) (s
 	tok, err := s.jwtForUser(u)
 	if err != nil {
 		return "", nil, err
+	}
+	if u.Role == authjwt.RoleAdmin && isConfiguredSuperAdminEmail(u.Email) {
+		u.CanCreateAdmins = true
+		u.CanDeleteData = true
 	}
 	return tok, u, nil
 }
@@ -148,7 +170,7 @@ func (s *authService) RegisterAdmin(ctx context.Context, adminUserID, email, pas
 	if !admin.IsActive {
 		return nil, ErrAdminOnly
 	}
-	if !admin.CanCreateAdmins {
+	if !admin.CanCreateAdmins && !isConfiguredSuperAdminEmail(admin.Email) {
 		return nil, ErrCannotCreateAdmins
 	}
 	u, err := s.repo.CreateLocalUser(ctx, email, password, authjwt.RoleAdmin, domain.LocalUserCreateOpts{

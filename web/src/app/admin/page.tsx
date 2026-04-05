@@ -59,6 +59,10 @@ export default function AdminPage() {
   const [categories, setCategories] = useState<CatsData | null>(null);
   const [dashErr, setDashErr] = useState("");
   const [ledgerRows, setLedgerRows] = useState<LedgerRow[]>([]);
+  const [ledgerOffset, setLedgerOffset] = useState(0);
+  const [ledgerPageSize, setLedgerPageSize] = useState(50);
+  const [ledgerTotal, setLedgerTotal] = useState<number | null>(null);
+  const [ledgerHasMore, setLedgerHasMore] = useState(false);
   const [txFilters, setTxFilters] = useState({
     user_id: "",
     trip_id: "",
@@ -74,6 +78,48 @@ export default function AdminPage() {
   const [canCreateAdmins, setCanCreateAdmins] = useState(false);
   const [canDeleteData, setCanDeleteData] = useState(false);
   const [msg, setMsg] = useState("");
+  const [ledgerLoading, setLedgerLoading] = useState(false);
+
+  const fetchLedger = useCallback(
+    async (filters: typeof txFilters, offset: number, pageSize?: number) => {
+      const lim = pageSize ?? ledgerPageSize;
+      setLedgerLoading(true);
+      try {
+        const q = new URLSearchParams();
+        q.set("limit", String(lim));
+        q.set("offset", String(offset));
+        const uid = filters.user_id.trim();
+        const tid = filters.trip_id.trim();
+        const em = filters.email.trim();
+        const pkg = filters.package.trim();
+        const rid = filters.rider_user_id.trim();
+        const did = filters.driver_user_id.trim();
+        if (uid) q.set("user_id", uid);
+        if (tid) q.set("trip_id", tid);
+        if (em) q.set("email", em);
+        if (pkg) q.set("package", pkg);
+        if (rid) q.set("rider_user_id", rid);
+        if (did) q.set("driver_user_id", did);
+        const res = await apiFetch(`/api/admin/transactions?${q.toString()}`);
+        const body = await res.json();
+        if (!res.ok) {
+          setMsg(body?.error?.message || "Transactions failed");
+          return;
+        }
+        const d = body.data;
+        const rows = d?.rows ?? d?.Rows ?? [];
+        setLedgerRows(Array.isArray(rows) ? rows : []);
+        const tc = d?.total_count ?? d?.totalCount;
+        const tn = Number(tc);
+        setLedgerTotal(Number.isFinite(tn) ? tn : null);
+        setLedgerHasMore(d?.has_more === true || d?.hasMore === true);
+        setLedgerOffset(offset);
+      } finally {
+        setLedgerLoading(false);
+      }
+    },
+    [ledgerPageSize],
+  );
 
   const loadData = useCallback(async () => {
     if (!session || session.user.role !== "admin") return;
@@ -110,26 +156,53 @@ export default function AdminPage() {
   useEffect(() => {
     if (!ready || !session || session.user.role !== "admin") return;
     void loadData();
-  }, [ready, session, loadData]);
+    void fetchLedger(
+      {
+        user_id: "",
+        trip_id: "",
+        email: "",
+        package: "",
+        rider_user_id: "",
+        driver_user_id: "",
+      },
+      0,
+    );
+  }, [ready, session, loadData, fetchLedger]);
 
-  const loadLedger = async () => {
-    const q = new URLSearchParams();
-    q.set("limit", "100");
-    if (txFilters.user_id) q.set("user_id", txFilters.user_id);
-    if (txFilters.trip_id) q.set("trip_id", txFilters.trip_id);
-    if (txFilters.email) q.set("email", txFilters.email);
-    if (txFilters.package) q.set("package", txFilters.package);
-    if (txFilters.rider_user_id) q.set("rider_user_id", txFilters.rider_user_id);
-    if (txFilters.driver_user_id) q.set("driver_user_id", txFilters.driver_user_id);
-    const res = await apiFetch(`/api/admin/transactions?${q.toString()}`);
-    const body = await res.json();
-    if (!res.ok) {
-      setMsg(body?.error?.message || "Transactions failed");
-      return;
-    }
-    const rows = body.data?.rows ?? body.data?.Rows ?? [];
-    setLedgerRows(Array.isArray(rows) ? rows : []);
+  const loadLedger = () => {
+    setMsg("");
+    void fetchLedger(txFilters, 0);
   };
+
+  const clearTxFilters = () => {
+    setTxFilters({
+      user_id: "",
+      trip_id: "",
+      email: "",
+      package: "",
+      rider_user_id: "",
+      driver_user_id: "",
+    });
+    setMsg("");
+    void fetchLedger(
+      {
+        user_id: "",
+        trip_id: "",
+        email: "",
+        package: "",
+        rider_user_id: "",
+        driver_user_id: "",
+      },
+      0,
+    );
+  };
+
+  const ledgerRangeLabel =
+    ledgerTotal != null && ledgerTotal > 0
+      ? `${ledgerOffset + 1}–${ledgerOffset + ledgerRows.length} of ${ledgerTotal}`
+      : ledgerRows.length > 0
+        ? `Rows ${ledgerOffset + 1}–${ledgerOffset + ledgerRows.length}`
+        : null;
 
   const createBiz = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -352,7 +425,30 @@ export default function AdminPage() {
         </div>
 
         <section className="bg-white rounded-xl border border-slate-200 p-4 overflow-x-auto">
-          <h2 className="font-medium text-slate-800 mb-3">Transaction ledger</h2>
+          <h2 className="font-medium text-slate-800 mb-1">Transaction ledger</h2>
+          <p className="text-sm text-slate-600 mb-3 max-w-3xl">
+            You do <span className="font-medium text-slate-800">not</span> need to fill every field. Leave boxes empty to load the latest rows (paged).
+            Use one or more filters together to narrow results—for example only email, or trip ID plus package.
+          </p>
+          <div className="flex flex-wrap items-center gap-3 mb-3 text-sm text-slate-600">
+            <label className="flex items-center gap-2">
+              <span>Page size</span>
+              <select
+                className="border border-slate-200 rounded-md px-2 py-1 bg-white"
+                value={ledgerPageSize}
+                onChange={(e) => {
+                  const n = parseInt(e.target.value, 10);
+                  setLedgerPageSize(n);
+                  void fetchLedger(txFilters, 0, n);
+                }}
+              >
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </label>
+            {ledgerRangeLabel && <span className="text-slate-500">{ledgerRangeLabel}</span>}
+          </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2 mb-3">
             <Input placeholder="User ID" value={txFilters.user_id} onChange={(e) => setTxFilters((f) => ({ ...f, user_id: e.target.value }))} />
             <Input placeholder="Trip ID" value={txFilters.trip_id} onChange={(e) => setTxFilters((f) => ({ ...f, trip_id: e.target.value }))} />
@@ -361,7 +457,30 @@ export default function AdminPage() {
             <Input placeholder="Rider user ID" value={txFilters.rider_user_id} onChange={(e) => setTxFilters((f) => ({ ...f, rider_user_id: e.target.value }))} />
             <Input placeholder="Driver user ID" value={txFilters.driver_user_id} onChange={(e) => setTxFilters((f) => ({ ...f, driver_user_id: e.target.value }))} />
           </div>
-          <Button type="button" variant="secondary" className="mb-3" onClick={() => void loadLedger()}>Apply filters</Button>
+          <div className="flex flex-wrap gap-2 mb-3">
+            <Button type="button" variant="secondary" onClick={loadLedger} disabled={ledgerLoading}>
+              {ledgerLoading ? "Loading…" : "Apply filters"}
+            </Button>
+            <Button type="button" variant="outline" onClick={clearTxFilters} disabled={ledgerLoading}>
+              Clear filters — show latest
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={ledgerLoading || ledgerOffset <= 0}
+              onClick={() => void fetchLedger(txFilters, Math.max(0, ledgerOffset - ledgerPageSize))}
+            >
+              Previous page
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={ledgerLoading || !ledgerHasMore}
+              onClick={() => void fetchLedger(txFilters, ledgerOffset + ledgerPageSize)}
+            >
+              Next page
+            </Button>
+          </div>
           <table className="w-full text-sm min-w-[800px]">
             <thead className="text-left text-slate-600 border-b">
               <tr>
@@ -375,8 +494,15 @@ export default function AdminPage() {
               </tr>
             </thead>
             <tbody>
-              {ledgerRows.map((r) => (
-                <tr key={r.id} className="border-t border-slate-100">
+              {!ledgerLoading && ledgerRows.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="py-8 text-center text-slate-500">
+                    No rows match these filters (or the ledger is empty).
+                  </td>
+                </tr>
+              )}
+              {ledgerRows.map((r, i) => (
+                <tr key={r.id || `row-${i}`} className="border-t border-slate-100">
                   <td className="py-2 pr-2 text-xs whitespace-nowrap">{r.created_at_rfc3339}</td>
                   <td className="py-2 pr-2 font-mono text-xs">{r.user_id}</td>
                   <td className="py-2 pr-2 text-xs">{r.user_email}</td>

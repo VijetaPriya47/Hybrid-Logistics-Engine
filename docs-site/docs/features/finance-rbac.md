@@ -34,7 +34,7 @@ Inactive business accounts cannot sign in (`PermissionDenied`).
 - `POST /api/admin/users/business` — admin; create business user (stores `created_by_admin_id` in SQL).
 - `PATCH /api/admin/users/business` — admin; JSON `{ "user_id", "is_active" }` toggles business login.
 - `POST /api/admin/users/admin` — admin; JSON `{ "email", "password", "can_create_admins", "can_delete_data" }`. Caller must have `can_create_admins` on their JWT.
-- `GET /api/admin/transactions` — admin; ledger with filters: `limit`, `user_id`, `trip_id`, `email`, `package`, `rider_user_id`, `driver_user_id`.
+- `GET /api/admin/transactions` — admin; ledger with filters: `limit` (default 100, max 500), `offset` (default 0, server-capped), `user_id`, `trip_id`, `email`, `package`, `rider_user_id`, `driver_user_id`. Response `data` includes `rows`, `total_count`, and `has_more` for pagination.
 
 Trip `userID` in JSON is ignored for identity: the gateway overwrites it with the JWT `sub`.
 

@@ -76,6 +76,11 @@ Once all services are up (green in Tilt), you can access them at these addresses
 | **RabbitMQ Manager** | [http://localhost:15672](http://localhost:15672) | Queue monitoring (User: `guest`/`guest`) |
 | **API Gateway** | [http://localhost:8081](http://localhost:8081) | Direct API access (for debugging) |
 
+## Database persistence
+
+- **Docker Compose:** `mongodb_data` and `postgres_data` are [named volumes](https://docs.docker.com/engine/storage/volumes/). Stopping containers or rebuilding app images does not remove them; only `docker compose down -v` (or `docker volume rm`) clears data.
+- **Kind + Tilt:** MongoDB is backed by the `mongodb-pvc` PersistentVolumeClaim (see `infra/development/k8s/mongodb-pvc.yaml`) mounted at `/data/db`. Replacing the Deployment or upgrading the image keeps data as long as you do not delete the PVC.
+- **Production:** Use your cloud provider’s managed PostgreSQL and MongoDB (or compatible URI). Set `DATABASE_URL` for **platform-service** and `MONGODB_URI` for **trip-service** / **driver-service** to those connection strings. Application redeploys then only restart processes; the databases retain all records.
 
 ## Offline / Restricted Network Mode
 

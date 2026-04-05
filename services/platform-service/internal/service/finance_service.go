@@ -44,6 +44,6 @@ func (s *financeService) CategoryInsights(ctx context.Context, from, to *time.Ti
 	return s.repo.CategoryInsights(ctx, from, to)
 }
 
-func (s *financeService) ListLedger(ctx context.Context, req *pb.ListLedgerRequest) ([]*pb.LedgerRow, error) {
+func (s *financeService) ListLedger(ctx context.Context, req *pb.ListLedgerRequest) (*pb.ListLedgerResponse, error) {
 	return s.repo.ListLedger(ctx, req)
 }
