@@ -57,7 +57,7 @@ func (h *financeHandler) GetGlobalRevenue(ctx context.Context, req *pb.GetGlobal
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid date range")
 	}
-	total, cur, trend, err := h.svc.GlobalRevenue(ctx, from, to)
+	total, cur, trend, err := h.svc.GlobalRevenue(ctx, from, to, req.GetTrendGranularity())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "%v", err)
 	}
@@ -76,10 +76,45 @@ func (h *financeHandler) GetRegionalAnalytics(ctx context.Context, req *pb.GetRe
 	return &pb.GetRegionalAnalyticsResponse{Regions: regions, Currency: cur}, nil
 }
 
-func (h *financeHandler) GetCategoryInsights(ctx context.Context, _ *pb.GetCategoryInsightsRequest) (*pb.GetCategoryInsightsResponse, error) {
-	cats, cur, err := h.svc.CategoryInsights(ctx)
+func (h *financeHandler) GetCategoryInsights(ctx context.Context, req *pb.GetCategoryInsightsRequest) (*pb.GetCategoryInsightsResponse, error) {
+	from, to, err := parseOptionalRange(req.GetFromRfc3339(), req.GetToRfc3339())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid date range")
+	}
+	cats, cur, err := h.svc.CategoryInsights(ctx, from, to)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "%v", err)
 	}
 	return &pb.GetCategoryInsightsResponse{Categories: cats, Currency: cur}, nil
+}
+
+func (h *financeHandler) GetCustomerDashboard(ctx context.Context, req *pb.GetCustomerDashboardRequest) (*pb.GetCustomerDashboardResponse, error) {
+	uid := req.GetUserId()
+	if uid == "" {
+		return nil, status.Error(codes.InvalidArgument, "user_id required")
+	}
+	from, to, err := parseOptionalRange(req.GetFromRfc3339(), req.GetToRfc3339())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "invalid date range")
+	}
+	income, expense, net, cur, series, recent, err := h.svc.CustomerDashboard(ctx, uid, from, to, req.GetSeriesGranularity(), req.GetRecentLimit())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "%v", err)
+	}
+	return &pb.GetCustomerDashboardResponse{
+		TotalIncomeCents:  income,
+		TotalExpenseCents: expense,
+		NetCents:          net,
+		Currency:          cur,
+		EarningSeries:     series,
+		Recent:            recent,
+	}, nil
+}
+
+func (h *financeHandler) ListLedger(ctx context.Context, req *pb.ListLedgerRequest) (*pb.ListLedgerResponse, error) {
+	rows, err := h.svc.ListLedger(ctx, req)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "%v", err)
+	}
+	return &pb.ListLedgerResponse{Rows: rows}, nil
 }

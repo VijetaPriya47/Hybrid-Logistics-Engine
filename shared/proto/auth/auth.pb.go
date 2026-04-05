@@ -74,12 +74,15 @@ func (x *LoginLocalRequest) GetPassword() string {
 }
 
 type UserSummary struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Email         string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
-	Role          string                 `protobuf:"bytes,3,opt,name=role,proto3" json:"role,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Email           string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
+	Role            string                 `protobuf:"bytes,3,opt,name=role,proto3" json:"role,omitempty"`
+	IsActive        bool                   `protobuf:"varint,4,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	CanCreateAdmins bool                   `protobuf:"varint,5,opt,name=can_create_admins,json=canCreateAdmins,proto3" json:"can_create_admins,omitempty"`
+	CanDeleteData   bool                   `protobuf:"varint,6,opt,name=can_delete_data,json=canDeleteData,proto3" json:"can_delete_data,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *UserSummary) Reset() {
@@ -131,6 +134,27 @@ func (x *UserSummary) GetRole() string {
 		return x.Role
 	}
 	return ""
+}
+
+func (x *UserSummary) GetIsActive() bool {
+	if x != nil {
+		return x.IsActive
+	}
+	return false
+}
+
+func (x *UserSummary) GetCanCreateAdmins() bool {
+	if x != nil {
+		return x.CanCreateAdmins
+	}
+	return false
+}
+
+func (x *UserSummary) GetCanDeleteData() bool {
+	if x != nil {
+		return x.CanDeleteData
+	}
+	return false
 }
 
 type LoginLocalResponse struct {
@@ -386,12 +410,14 @@ func (x *RegisterBusinessResponse) GetUser() *UserSummary {
 }
 
 type RegisterAdminRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	AdminUserId   string                 `protobuf:"bytes,1,opt,name=admin_user_id,json=adminUserId,proto3" json:"admin_user_id,omitempty"`
-	Email         string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
-	Password      string                 `protobuf:"bytes,3,opt,name=password,proto3" json:"password,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	AdminUserId     string                 `protobuf:"bytes,1,opt,name=admin_user_id,json=adminUserId,proto3" json:"admin_user_id,omitempty"`
+	Email           string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
+	Password        string                 `protobuf:"bytes,3,opt,name=password,proto3" json:"password,omitempty"`
+	CanCreateAdmins bool                   `protobuf:"varint,4,opt,name=can_create_admins,json=canCreateAdmins,proto3" json:"can_create_admins,omitempty"`
+	CanDeleteData   bool                   `protobuf:"varint,5,opt,name=can_delete_data,json=canDeleteData,proto3" json:"can_delete_data,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *RegisterAdminRequest) Reset() {
@@ -445,6 +471,20 @@ func (x *RegisterAdminRequest) GetPassword() string {
 	return ""
 }
 
+func (x *RegisterAdminRequest) GetCanCreateAdmins() bool {
+	if x != nil {
+		return x.CanCreateAdmins
+	}
+	return false
+}
+
+func (x *RegisterAdminRequest) GetCanDeleteData() bool {
+	if x != nil {
+		return x.CanDeleteData
+	}
+	return false
+}
+
 type RegisterAdminResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	User          *UserSummary           `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
@@ -489,6 +529,274 @@ func (x *RegisterAdminResponse) GetUser() *UserSummary {
 	return nil
 }
 
+type ListBusinessUsersRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	AdminUserId   string                 `protobuf:"bytes,1,opt,name=admin_user_id,json=adminUserId,proto3" json:"admin_user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListBusinessUsersRequest) Reset() {
+	*x = ListBusinessUsersRequest{}
+	mi := &file_auth_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListBusinessUsersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListBusinessUsersRequest) ProtoMessage() {}
+
+func (x *ListBusinessUsersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListBusinessUsersRequest.ProtoReflect.Descriptor instead.
+func (*ListBusinessUsersRequest) Descriptor() ([]byte, []int) {
+	return file_auth_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ListBusinessUsersRequest) GetAdminUserId() string {
+	if x != nil {
+		return x.AdminUserId
+	}
+	return ""
+}
+
+type BusinessUserRow struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	Id                  string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Email               string                 `protobuf:"bytes,2,opt,name=email,proto3" json:"email,omitempty"`
+	IsActive            bool                   `protobuf:"varint,3,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	CreatedByAdminEmail string                 `protobuf:"bytes,4,opt,name=created_by_admin_email,json=createdByAdminEmail,proto3" json:"created_by_admin_email,omitempty"`
+	CreatedAtRfc3339    string                 `protobuf:"bytes,5,opt,name=created_at_rfc3339,json=createdAtRfc3339,proto3" json:"created_at_rfc3339,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *BusinessUserRow) Reset() {
+	*x = BusinessUserRow{}
+	mi := &file_auth_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BusinessUserRow) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BusinessUserRow) ProtoMessage() {}
+
+func (x *BusinessUserRow) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BusinessUserRow.ProtoReflect.Descriptor instead.
+func (*BusinessUserRow) Descriptor() ([]byte, []int) {
+	return file_auth_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *BusinessUserRow) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *BusinessUserRow) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *BusinessUserRow) GetIsActive() bool {
+	if x != nil {
+		return x.IsActive
+	}
+	return false
+}
+
+func (x *BusinessUserRow) GetCreatedByAdminEmail() string {
+	if x != nil {
+		return x.CreatedByAdminEmail
+	}
+	return ""
+}
+
+func (x *BusinessUserRow) GetCreatedAtRfc3339() string {
+	if x != nil {
+		return x.CreatedAtRfc3339
+	}
+	return ""
+}
+
+type ListBusinessUsersResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Users         []*BusinessUserRow     `protobuf:"bytes,1,rep,name=users,proto3" json:"users,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListBusinessUsersResponse) Reset() {
+	*x = ListBusinessUsersResponse{}
+	mi := &file_auth_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListBusinessUsersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListBusinessUsersResponse) ProtoMessage() {}
+
+func (x *ListBusinessUsersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListBusinessUsersResponse.ProtoReflect.Descriptor instead.
+func (*ListBusinessUsersResponse) Descriptor() ([]byte, []int) {
+	return file_auth_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *ListBusinessUsersResponse) GetUsers() []*BusinessUserRow {
+	if x != nil {
+		return x.Users
+	}
+	return nil
+}
+
+type SetBusinessUserActiveRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	AdminUserId    string                 `protobuf:"bytes,1,opt,name=admin_user_id,json=adminUserId,proto3" json:"admin_user_id,omitempty"`
+	BusinessUserId string                 `protobuf:"bytes,2,opt,name=business_user_id,json=businessUserId,proto3" json:"business_user_id,omitempty"`
+	IsActive       bool                   `protobuf:"varint,3,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *SetBusinessUserActiveRequest) Reset() {
+	*x = SetBusinessUserActiveRequest{}
+	mi := &file_auth_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetBusinessUserActiveRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetBusinessUserActiveRequest) ProtoMessage() {}
+
+func (x *SetBusinessUserActiveRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetBusinessUserActiveRequest.ProtoReflect.Descriptor instead.
+func (*SetBusinessUserActiveRequest) Descriptor() ([]byte, []int) {
+	return file_auth_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *SetBusinessUserActiveRequest) GetAdminUserId() string {
+	if x != nil {
+		return x.AdminUserId
+	}
+	return ""
+}
+
+func (x *SetBusinessUserActiveRequest) GetBusinessUserId() string {
+	if x != nil {
+		return x.BusinessUserId
+	}
+	return ""
+}
+
+func (x *SetBusinessUserActiveRequest) GetIsActive() bool {
+	if x != nil {
+		return x.IsActive
+	}
+	return false
+}
+
+type SetBusinessUserActiveResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	User          *UserSummary           `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetBusinessUserActiveResponse) Reset() {
+	*x = SetBusinessUserActiveResponse{}
+	mi := &file_auth_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetBusinessUserActiveResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetBusinessUserActiveResponse) ProtoMessage() {}
+
+func (x *SetBusinessUserActiveResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_auth_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetBusinessUserActiveResponse.ProtoReflect.Descriptor instead.
+func (*SetBusinessUserActiveResponse) Descriptor() ([]byte, []int) {
+	return file_auth_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *SetBusinessUserActiveResponse) GetUser() *UserSummary {
+	if x != nil {
+		return x.User
+	}
+	return nil
+}
+
 type RequestPasswordResetRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
@@ -498,7 +806,7 @@ type RequestPasswordResetRequest struct {
 
 func (x *RequestPasswordResetRequest) Reset() {
 	*x = RequestPasswordResetRequest{}
-	mi := &file_auth_proto_msgTypes[9]
+	mi := &file_auth_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -510,7 +818,7 @@ func (x *RequestPasswordResetRequest) String() string {
 func (*RequestPasswordResetRequest) ProtoMessage() {}
 
 func (x *RequestPasswordResetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_proto_msgTypes[9]
+	mi := &file_auth_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -523,7 +831,7 @@ func (x *RequestPasswordResetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestPasswordResetRequest.ProtoReflect.Descriptor instead.
 func (*RequestPasswordResetRequest) Descriptor() ([]byte, []int) {
-	return file_auth_proto_rawDescGZIP(), []int{9}
+	return file_auth_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *RequestPasswordResetRequest) GetEmail() string {
@@ -541,7 +849,7 @@ type RequestPasswordResetResponse struct {
 
 func (x *RequestPasswordResetResponse) Reset() {
 	*x = RequestPasswordResetResponse{}
-	mi := &file_auth_proto_msgTypes[10]
+	mi := &file_auth_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -553,7 +861,7 @@ func (x *RequestPasswordResetResponse) String() string {
 func (*RequestPasswordResetResponse) ProtoMessage() {}
 
 func (x *RequestPasswordResetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_proto_msgTypes[10]
+	mi := &file_auth_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -566,7 +874,7 @@ func (x *RequestPasswordResetResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RequestPasswordResetResponse.ProtoReflect.Descriptor instead.
 func (*RequestPasswordResetResponse) Descriptor() ([]byte, []int) {
-	return file_auth_proto_rawDescGZIP(), []int{10}
+	return file_auth_proto_rawDescGZIP(), []int{15}
 }
 
 type ResetPasswordRequest struct {
@@ -579,7 +887,7 @@ type ResetPasswordRequest struct {
 
 func (x *ResetPasswordRequest) Reset() {
 	*x = ResetPasswordRequest{}
-	mi := &file_auth_proto_msgTypes[11]
+	mi := &file_auth_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -591,7 +899,7 @@ func (x *ResetPasswordRequest) String() string {
 func (*ResetPasswordRequest) ProtoMessage() {}
 
 func (x *ResetPasswordRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_proto_msgTypes[11]
+	mi := &file_auth_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -604,7 +912,7 @@ func (x *ResetPasswordRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResetPasswordRequest.ProtoReflect.Descriptor instead.
 func (*ResetPasswordRequest) Descriptor() ([]byte, []int) {
-	return file_auth_proto_rawDescGZIP(), []int{11}
+	return file_auth_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ResetPasswordRequest) GetToken() string {
@@ -629,7 +937,7 @@ type ResetPasswordResponse struct {
 
 func (x *ResetPasswordResponse) Reset() {
 	*x = ResetPasswordResponse{}
-	mi := &file_auth_proto_msgTypes[12]
+	mi := &file_auth_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -641,7 +949,7 @@ func (x *ResetPasswordResponse) String() string {
 func (*ResetPasswordResponse) ProtoMessage() {}
 
 func (x *ResetPasswordResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_proto_msgTypes[12]
+	mi := &file_auth_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -654,7 +962,7 @@ func (x *ResetPasswordResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResetPasswordResponse.ProtoReflect.Descriptor instead.
 func (*ResetPasswordResponse) Descriptor() ([]byte, []int) {
-	return file_auth_proto_rawDescGZIP(), []int{12}
+	return file_auth_proto_rawDescGZIP(), []int{17}
 }
 
 type ListAuditLogsRequest struct {
@@ -667,7 +975,7 @@ type ListAuditLogsRequest struct {
 
 func (x *ListAuditLogsRequest) Reset() {
 	*x = ListAuditLogsRequest{}
-	mi := &file_auth_proto_msgTypes[13]
+	mi := &file_auth_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -679,7 +987,7 @@ func (x *ListAuditLogsRequest) String() string {
 func (*ListAuditLogsRequest) ProtoMessage() {}
 
 func (x *ListAuditLogsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_proto_msgTypes[13]
+	mi := &file_auth_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -692,7 +1000,7 @@ func (x *ListAuditLogsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAuditLogsRequest.ProtoReflect.Descriptor instead.
 func (*ListAuditLogsRequest) Descriptor() ([]byte, []int) {
-	return file_auth_proto_rawDescGZIP(), []int{13}
+	return file_auth_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ListAuditLogsRequest) GetLimit() int32 {
@@ -725,7 +1033,7 @@ type AuditLogEntry struct {
 
 func (x *AuditLogEntry) Reset() {
 	*x = AuditLogEntry{}
-	mi := &file_auth_proto_msgTypes[14]
+	mi := &file_auth_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -737,7 +1045,7 @@ func (x *AuditLogEntry) String() string {
 func (*AuditLogEntry) ProtoMessage() {}
 
 func (x *AuditLogEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_proto_msgTypes[14]
+	mi := &file_auth_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -750,7 +1058,7 @@ func (x *AuditLogEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AuditLogEntry.ProtoReflect.Descriptor instead.
 func (*AuditLogEntry) Descriptor() ([]byte, []int) {
-	return file_auth_proto_rawDescGZIP(), []int{14}
+	return file_auth_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *AuditLogEntry) GetId() string {
@@ -818,7 +1126,7 @@ type ListAuditLogsResponse struct {
 
 func (x *ListAuditLogsResponse) Reset() {
 	*x = ListAuditLogsResponse{}
-	mi := &file_auth_proto_msgTypes[15]
+	mi := &file_auth_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -830,7 +1138,7 @@ func (x *ListAuditLogsResponse) String() string {
 func (*ListAuditLogsResponse) ProtoMessage() {}
 
 func (x *ListAuditLogsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_proto_msgTypes[15]
+	mi := &file_auth_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -843,7 +1151,7 @@ func (x *ListAuditLogsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAuditLogsResponse.ProtoReflect.Descriptor instead.
 func (*ListAuditLogsResponse) Descriptor() ([]byte, []int) {
-	return file_auth_proto_rawDescGZIP(), []int{15}
+	return file_auth_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ListAuditLogsResponse) GetEntries() []*AuditLogEntry {
@@ -867,7 +1175,7 @@ type InsertAuditLogRequest struct {
 
 func (x *InsertAuditLogRequest) Reset() {
 	*x = InsertAuditLogRequest{}
-	mi := &file_auth_proto_msgTypes[16]
+	mi := &file_auth_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -879,7 +1187,7 @@ func (x *InsertAuditLogRequest) String() string {
 func (*InsertAuditLogRequest) ProtoMessage() {}
 
 func (x *InsertAuditLogRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_proto_msgTypes[16]
+	mi := &file_auth_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -892,7 +1200,7 @@ func (x *InsertAuditLogRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InsertAuditLogRequest.ProtoReflect.Descriptor instead.
 func (*InsertAuditLogRequest) Descriptor() ([]byte, []int) {
-	return file_auth_proto_rawDescGZIP(), []int{16}
+	return file_auth_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *InsertAuditLogRequest) GetMethod() string {
@@ -945,7 +1253,7 @@ type InsertAuditLogResponse struct {
 
 func (x *InsertAuditLogResponse) Reset() {
 	*x = InsertAuditLogResponse{}
-	mi := &file_auth_proto_msgTypes[17]
+	mi := &file_auth_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -957,7 +1265,7 @@ func (x *InsertAuditLogResponse) String() string {
 func (*InsertAuditLogResponse) ProtoMessage() {}
 
 func (x *InsertAuditLogResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_auth_proto_msgTypes[17]
+	mi := &file_auth_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -970,7 +1278,7 @@ func (x *InsertAuditLogResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use InsertAuditLogResponse.ProtoReflect.Descriptor instead.
 func (*InsertAuditLogResponse) Descriptor() ([]byte, []int) {
-	return file_auth_proto_rawDescGZIP(), []int{17}
+	return file_auth_proto_rawDescGZIP(), []int{22}
 }
 
 var File_auth_proto protoreflect.FileDescriptor
@@ -981,11 +1289,14 @@ const file_auth_proto_rawDesc = "" +
 	"auth.proto\x12\x04auth\"E\n" +
 	"\x11LoginLocalRequest\x12\x14\n" +
 	"\x05email\x18\x01 \x01(\tR\x05email\x12\x1a\n" +
-	"\bpassword\x18\x02 \x01(\tR\bpassword\"G\n" +
+	"\bpassword\x18\x02 \x01(\tR\bpassword\"\xb8\x01\n" +
 	"\vUserSummary\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x12\x12\n" +
-	"\x04role\x18\x03 \x01(\tR\x04role\"M\n" +
+	"\x04role\x18\x03 \x01(\tR\x04role\x12\x1b\n" +
+	"\tis_active\x18\x04 \x01(\bR\bisActive\x12*\n" +
+	"\x11can_create_admins\x18\x05 \x01(\bR\x0fcanCreateAdmins\x12&\n" +
+	"\x0fcan_delete_data\x18\x06 \x01(\bR\rcanDeleteData\"M\n" +
 	"\x12LoginLocalResponse\x12\x10\n" +
 	"\x03jwt\x18\x01 \x01(\tR\x03jwt\x12%\n" +
 	"\x04user\x18\x02 \x01(\v2\x11.auth.UserSummaryR\x04user\"0\n" +
@@ -999,12 +1310,30 @@ const file_auth_proto_rawDesc = "" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x12\x1a\n" +
 	"\bpassword\x18\x03 \x01(\tR\bpassword\"A\n" +
 	"\x18RegisterBusinessResponse\x12%\n" +
-	"\x04user\x18\x01 \x01(\v2\x11.auth.UserSummaryR\x04user\"l\n" +
+	"\x04user\x18\x01 \x01(\v2\x11.auth.UserSummaryR\x04user\"\xc0\x01\n" +
 	"\x14RegisterAdminRequest\x12\"\n" +
 	"\radmin_user_id\x18\x01 \x01(\tR\vadminUserId\x12\x14\n" +
 	"\x05email\x18\x02 \x01(\tR\x05email\x12\x1a\n" +
-	"\bpassword\x18\x03 \x01(\tR\bpassword\">\n" +
+	"\bpassword\x18\x03 \x01(\tR\bpassword\x12*\n" +
+	"\x11can_create_admins\x18\x04 \x01(\bR\x0fcanCreateAdmins\x12&\n" +
+	"\x0fcan_delete_data\x18\x05 \x01(\bR\rcanDeleteData\">\n" +
 	"\x15RegisterAdminResponse\x12%\n" +
+	"\x04user\x18\x01 \x01(\v2\x11.auth.UserSummaryR\x04user\">\n" +
+	"\x18ListBusinessUsersRequest\x12\"\n" +
+	"\radmin_user_id\x18\x01 \x01(\tR\vadminUserId\"\xb7\x01\n" +
+	"\x0fBusinessUserRow\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
+	"\x05email\x18\x02 \x01(\tR\x05email\x12\x1b\n" +
+	"\tis_active\x18\x03 \x01(\bR\bisActive\x123\n" +
+	"\x16created_by_admin_email\x18\x04 \x01(\tR\x13createdByAdminEmail\x12,\n" +
+	"\x12created_at_rfc3339\x18\x05 \x01(\tR\x10createdAtRfc3339\"H\n" +
+	"\x19ListBusinessUsersResponse\x12+\n" +
+	"\x05users\x18\x01 \x03(\v2\x15.auth.BusinessUserRowR\x05users\"\x89\x01\n" +
+	"\x1cSetBusinessUserActiveRequest\x12\"\n" +
+	"\radmin_user_id\x18\x01 \x01(\tR\vadminUserId\x12(\n" +
+	"\x10business_user_id\x18\x02 \x01(\tR\x0ebusinessUserId\x12\x1b\n" +
+	"\tis_active\x18\x03 \x01(\bR\bisActive\"F\n" +
+	"\x1dSetBusinessUserActiveResponse\x12%\n" +
 	"\x04user\x18\x01 \x01(\v2\x11.auth.UserSummaryR\x04user\"3\n" +
 	"\x1bRequestPasswordResetRequest\x12\x14\n" +
 	"\x05email\x18\x01 \x01(\tR\x05email\"\x1e\n" +
@@ -1037,13 +1366,15 @@ const file_auth_proto_rawDesc = "" +
 	"\x02ip\x18\x05 \x01(\tR\x02ip\x12\x1f\n" +
 	"\vdetail_json\x18\x06 \x01(\tR\n" +
 	"detailJson\"\x18\n" +
-	"\x16InsertAuditLogResponse2\xf6\x04\n" +
+	"\x16InsertAuditLogResponse2\xae\x06\n" +
 	"\x0fUserAuthService\x12?\n" +
 	"\n" +
 	"LoginLocal\x12\x17.auth.LoginLocalRequest\x1a\x18.auth.LoginLocalResponse\x12E\n" +
 	"\fGoogleVerify\x12\x19.auth.GoogleVerifyRequest\x1a\x1a.auth.GoogleVerifyResponse\x12Q\n" +
 	"\x10RegisterBusiness\x12\x1d.auth.RegisterBusinessRequest\x1a\x1e.auth.RegisterBusinessResponse\x12H\n" +
-	"\rRegisterAdmin\x12\x1a.auth.RegisterAdminRequest\x1a\x1b.auth.RegisterAdminResponse\x12]\n" +
+	"\rRegisterAdmin\x12\x1a.auth.RegisterAdminRequest\x1a\x1b.auth.RegisterAdminResponse\x12T\n" +
+	"\x11ListBusinessUsers\x12\x1e.auth.ListBusinessUsersRequest\x1a\x1f.auth.ListBusinessUsersResponse\x12`\n" +
+	"\x15SetBusinessUserActive\x12\".auth.SetBusinessUserActiveRequest\x1a#.auth.SetBusinessUserActiveResponse\x12]\n" +
 	"\x14RequestPasswordReset\x12!.auth.RequestPasswordResetRequest\x1a\".auth.RequestPasswordResetResponse\x12H\n" +
 	"\rResetPassword\x12\x1a.auth.ResetPasswordRequest\x1a\x1b.auth.ResetPasswordResponse\x12H\n" +
 	"\rListAuditLogs\x12\x1a.auth.ListAuditLogsRequest\x1a\x1b.auth.ListAuditLogsResponse\x12K\n" +
@@ -1061,54 +1392,65 @@ func file_auth_proto_rawDescGZIP() []byte {
 	return file_auth_proto_rawDescData
 }
 
-var file_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
 var file_auth_proto_goTypes = []any{
-	(*LoginLocalRequest)(nil),            // 0: auth.LoginLocalRequest
-	(*UserSummary)(nil),                  // 1: auth.UserSummary
-	(*LoginLocalResponse)(nil),           // 2: auth.LoginLocalResponse
-	(*GoogleVerifyRequest)(nil),          // 3: auth.GoogleVerifyRequest
-	(*GoogleVerifyResponse)(nil),         // 4: auth.GoogleVerifyResponse
-	(*RegisterBusinessRequest)(nil),      // 5: auth.RegisterBusinessRequest
-	(*RegisterBusinessResponse)(nil),     // 6: auth.RegisterBusinessResponse
-	(*RegisterAdminRequest)(nil),         // 7: auth.RegisterAdminRequest
-	(*RegisterAdminResponse)(nil),        // 8: auth.RegisterAdminResponse
-	(*RequestPasswordResetRequest)(nil),  // 9: auth.RequestPasswordResetRequest
-	(*RequestPasswordResetResponse)(nil), // 10: auth.RequestPasswordResetResponse
-	(*ResetPasswordRequest)(nil),         // 11: auth.ResetPasswordRequest
-	(*ResetPasswordResponse)(nil),        // 12: auth.ResetPasswordResponse
-	(*ListAuditLogsRequest)(nil),         // 13: auth.ListAuditLogsRequest
-	(*AuditLogEntry)(nil),                // 14: auth.AuditLogEntry
-	(*ListAuditLogsResponse)(nil),        // 15: auth.ListAuditLogsResponse
-	(*InsertAuditLogRequest)(nil),        // 16: auth.InsertAuditLogRequest
-	(*InsertAuditLogResponse)(nil),       // 17: auth.InsertAuditLogResponse
+	(*LoginLocalRequest)(nil),             // 0: auth.LoginLocalRequest
+	(*UserSummary)(nil),                   // 1: auth.UserSummary
+	(*LoginLocalResponse)(nil),            // 2: auth.LoginLocalResponse
+	(*GoogleVerifyRequest)(nil),           // 3: auth.GoogleVerifyRequest
+	(*GoogleVerifyResponse)(nil),          // 4: auth.GoogleVerifyResponse
+	(*RegisterBusinessRequest)(nil),       // 5: auth.RegisterBusinessRequest
+	(*RegisterBusinessResponse)(nil),      // 6: auth.RegisterBusinessResponse
+	(*RegisterAdminRequest)(nil),          // 7: auth.RegisterAdminRequest
+	(*RegisterAdminResponse)(nil),         // 8: auth.RegisterAdminResponse
+	(*ListBusinessUsersRequest)(nil),      // 9: auth.ListBusinessUsersRequest
+	(*BusinessUserRow)(nil),               // 10: auth.BusinessUserRow
+	(*ListBusinessUsersResponse)(nil),     // 11: auth.ListBusinessUsersResponse
+	(*SetBusinessUserActiveRequest)(nil),  // 12: auth.SetBusinessUserActiveRequest
+	(*SetBusinessUserActiveResponse)(nil), // 13: auth.SetBusinessUserActiveResponse
+	(*RequestPasswordResetRequest)(nil),   // 14: auth.RequestPasswordResetRequest
+	(*RequestPasswordResetResponse)(nil),  // 15: auth.RequestPasswordResetResponse
+	(*ResetPasswordRequest)(nil),          // 16: auth.ResetPasswordRequest
+	(*ResetPasswordResponse)(nil),         // 17: auth.ResetPasswordResponse
+	(*ListAuditLogsRequest)(nil),          // 18: auth.ListAuditLogsRequest
+	(*AuditLogEntry)(nil),                 // 19: auth.AuditLogEntry
+	(*ListAuditLogsResponse)(nil),         // 20: auth.ListAuditLogsResponse
+	(*InsertAuditLogRequest)(nil),         // 21: auth.InsertAuditLogRequest
+	(*InsertAuditLogResponse)(nil),        // 22: auth.InsertAuditLogResponse
 }
 var file_auth_proto_depIdxs = []int32{
 	1,  // 0: auth.LoginLocalResponse.user:type_name -> auth.UserSummary
 	1,  // 1: auth.GoogleVerifyResponse.user:type_name -> auth.UserSummary
 	1,  // 2: auth.RegisterBusinessResponse.user:type_name -> auth.UserSummary
 	1,  // 3: auth.RegisterAdminResponse.user:type_name -> auth.UserSummary
-	14, // 4: auth.ListAuditLogsResponse.entries:type_name -> auth.AuditLogEntry
-	0,  // 5: auth.UserAuthService.LoginLocal:input_type -> auth.LoginLocalRequest
-	3,  // 6: auth.UserAuthService.GoogleVerify:input_type -> auth.GoogleVerifyRequest
-	5,  // 7: auth.UserAuthService.RegisterBusiness:input_type -> auth.RegisterBusinessRequest
-	7,  // 8: auth.UserAuthService.RegisterAdmin:input_type -> auth.RegisterAdminRequest
-	9,  // 9: auth.UserAuthService.RequestPasswordReset:input_type -> auth.RequestPasswordResetRequest
-	11, // 10: auth.UserAuthService.ResetPassword:input_type -> auth.ResetPasswordRequest
-	13, // 11: auth.UserAuthService.ListAuditLogs:input_type -> auth.ListAuditLogsRequest
-	16, // 12: auth.UserAuthService.InsertAuditLog:input_type -> auth.InsertAuditLogRequest
-	2,  // 13: auth.UserAuthService.LoginLocal:output_type -> auth.LoginLocalResponse
-	4,  // 14: auth.UserAuthService.GoogleVerify:output_type -> auth.GoogleVerifyResponse
-	6,  // 15: auth.UserAuthService.RegisterBusiness:output_type -> auth.RegisterBusinessResponse
-	8,  // 16: auth.UserAuthService.RegisterAdmin:output_type -> auth.RegisterAdminResponse
-	10, // 17: auth.UserAuthService.RequestPasswordReset:output_type -> auth.RequestPasswordResetResponse
-	12, // 18: auth.UserAuthService.ResetPassword:output_type -> auth.ResetPasswordResponse
-	15, // 19: auth.UserAuthService.ListAuditLogs:output_type -> auth.ListAuditLogsResponse
-	17, // 20: auth.UserAuthService.InsertAuditLog:output_type -> auth.InsertAuditLogResponse
-	13, // [13:21] is the sub-list for method output_type
-	5,  // [5:13] is the sub-list for method input_type
-	5,  // [5:5] is the sub-list for extension type_name
-	5,  // [5:5] is the sub-list for extension extendee
-	0,  // [0:5] is the sub-list for field type_name
+	10, // 4: auth.ListBusinessUsersResponse.users:type_name -> auth.BusinessUserRow
+	1,  // 5: auth.SetBusinessUserActiveResponse.user:type_name -> auth.UserSummary
+	19, // 6: auth.ListAuditLogsResponse.entries:type_name -> auth.AuditLogEntry
+	0,  // 7: auth.UserAuthService.LoginLocal:input_type -> auth.LoginLocalRequest
+	3,  // 8: auth.UserAuthService.GoogleVerify:input_type -> auth.GoogleVerifyRequest
+	5,  // 9: auth.UserAuthService.RegisterBusiness:input_type -> auth.RegisterBusinessRequest
+	7,  // 10: auth.UserAuthService.RegisterAdmin:input_type -> auth.RegisterAdminRequest
+	9,  // 11: auth.UserAuthService.ListBusinessUsers:input_type -> auth.ListBusinessUsersRequest
+	12, // 12: auth.UserAuthService.SetBusinessUserActive:input_type -> auth.SetBusinessUserActiveRequest
+	14, // 13: auth.UserAuthService.RequestPasswordReset:input_type -> auth.RequestPasswordResetRequest
+	16, // 14: auth.UserAuthService.ResetPassword:input_type -> auth.ResetPasswordRequest
+	18, // 15: auth.UserAuthService.ListAuditLogs:input_type -> auth.ListAuditLogsRequest
+	21, // 16: auth.UserAuthService.InsertAuditLog:input_type -> auth.InsertAuditLogRequest
+	2,  // 17: auth.UserAuthService.LoginLocal:output_type -> auth.LoginLocalResponse
+	4,  // 18: auth.UserAuthService.GoogleVerify:output_type -> auth.GoogleVerifyResponse
+	6,  // 19: auth.UserAuthService.RegisterBusiness:output_type -> auth.RegisterBusinessResponse
+	8,  // 20: auth.UserAuthService.RegisterAdmin:output_type -> auth.RegisterAdminResponse
+	11, // 21: auth.UserAuthService.ListBusinessUsers:output_type -> auth.ListBusinessUsersResponse
+	13, // 22: auth.UserAuthService.SetBusinessUserActive:output_type -> auth.SetBusinessUserActiveResponse
+	15, // 23: auth.UserAuthService.RequestPasswordReset:output_type -> auth.RequestPasswordResetResponse
+	17, // 24: auth.UserAuthService.ResetPassword:output_type -> auth.ResetPasswordResponse
+	20, // 25: auth.UserAuthService.ListAuditLogs:output_type -> auth.ListAuditLogsResponse
+	22, // 26: auth.UserAuthService.InsertAuditLog:output_type -> auth.InsertAuditLogResponse
+	17, // [17:27] is the sub-list for method output_type
+	7,  // [7:17] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_auth_proto_init() }
@@ -1122,7 +1464,7 @@ func file_auth_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_auth_proto_rawDesc), len(file_auth_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   18,
+			NumMessages:   23,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

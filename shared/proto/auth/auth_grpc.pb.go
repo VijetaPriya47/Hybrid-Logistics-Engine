@@ -19,14 +19,16 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	UserAuthService_LoginLocal_FullMethodName           = "/auth.UserAuthService/LoginLocal"
-	UserAuthService_GoogleVerify_FullMethodName         = "/auth.UserAuthService/GoogleVerify"
-	UserAuthService_RegisterBusiness_FullMethodName     = "/auth.UserAuthService/RegisterBusiness"
-	UserAuthService_RegisterAdmin_FullMethodName        = "/auth.UserAuthService/RegisterAdmin"
-	UserAuthService_RequestPasswordReset_FullMethodName = "/auth.UserAuthService/RequestPasswordReset"
-	UserAuthService_ResetPassword_FullMethodName        = "/auth.UserAuthService/ResetPassword"
-	UserAuthService_ListAuditLogs_FullMethodName        = "/auth.UserAuthService/ListAuditLogs"
-	UserAuthService_InsertAuditLog_FullMethodName       = "/auth.UserAuthService/InsertAuditLog"
+	UserAuthService_LoginLocal_FullMethodName            = "/auth.UserAuthService/LoginLocal"
+	UserAuthService_GoogleVerify_FullMethodName          = "/auth.UserAuthService/GoogleVerify"
+	UserAuthService_RegisterBusiness_FullMethodName      = "/auth.UserAuthService/RegisterBusiness"
+	UserAuthService_RegisterAdmin_FullMethodName         = "/auth.UserAuthService/RegisterAdmin"
+	UserAuthService_ListBusinessUsers_FullMethodName     = "/auth.UserAuthService/ListBusinessUsers"
+	UserAuthService_SetBusinessUserActive_FullMethodName = "/auth.UserAuthService/SetBusinessUserActive"
+	UserAuthService_RequestPasswordReset_FullMethodName  = "/auth.UserAuthService/RequestPasswordReset"
+	UserAuthService_ResetPassword_FullMethodName         = "/auth.UserAuthService/ResetPassword"
+	UserAuthService_ListAuditLogs_FullMethodName         = "/auth.UserAuthService/ListAuditLogs"
+	UserAuthService_InsertAuditLog_FullMethodName        = "/auth.UserAuthService/InsertAuditLog"
 )
 
 // UserAuthServiceClient is the client API for UserAuthService service.
@@ -37,6 +39,8 @@ type UserAuthServiceClient interface {
 	GoogleVerify(ctx context.Context, in *GoogleVerifyRequest, opts ...grpc.CallOption) (*GoogleVerifyResponse, error)
 	RegisterBusiness(ctx context.Context, in *RegisterBusinessRequest, opts ...grpc.CallOption) (*RegisterBusinessResponse, error)
 	RegisterAdmin(ctx context.Context, in *RegisterAdminRequest, opts ...grpc.CallOption) (*RegisterAdminResponse, error)
+	ListBusinessUsers(ctx context.Context, in *ListBusinessUsersRequest, opts ...grpc.CallOption) (*ListBusinessUsersResponse, error)
+	SetBusinessUserActive(ctx context.Context, in *SetBusinessUserActiveRequest, opts ...grpc.CallOption) (*SetBusinessUserActiveResponse, error)
 	RequestPasswordReset(ctx context.Context, in *RequestPasswordResetRequest, opts ...grpc.CallOption) (*RequestPasswordResetResponse, error)
 	ResetPassword(ctx context.Context, in *ResetPasswordRequest, opts ...grpc.CallOption) (*ResetPasswordResponse, error)
 	ListAuditLogs(ctx context.Context, in *ListAuditLogsRequest, opts ...grpc.CallOption) (*ListAuditLogsResponse, error)
@@ -91,6 +95,26 @@ func (c *userAuthServiceClient) RegisterAdmin(ctx context.Context, in *RegisterA
 	return out, nil
 }
 
+func (c *userAuthServiceClient) ListBusinessUsers(ctx context.Context, in *ListBusinessUsersRequest, opts ...grpc.CallOption) (*ListBusinessUsersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListBusinessUsersResponse)
+	err := c.cc.Invoke(ctx, UserAuthService_ListBusinessUsers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *userAuthServiceClient) SetBusinessUserActive(ctx context.Context, in *SetBusinessUserActiveRequest, opts ...grpc.CallOption) (*SetBusinessUserActiveResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetBusinessUserActiveResponse)
+	err := c.cc.Invoke(ctx, UserAuthService_SetBusinessUserActive_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *userAuthServiceClient) RequestPasswordReset(ctx context.Context, in *RequestPasswordResetRequest, opts ...grpc.CallOption) (*RequestPasswordResetResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RequestPasswordResetResponse)
@@ -139,6 +163,8 @@ type UserAuthServiceServer interface {
 	GoogleVerify(context.Context, *GoogleVerifyRequest) (*GoogleVerifyResponse, error)
 	RegisterBusiness(context.Context, *RegisterBusinessRequest) (*RegisterBusinessResponse, error)
 	RegisterAdmin(context.Context, *RegisterAdminRequest) (*RegisterAdminResponse, error)
+	ListBusinessUsers(context.Context, *ListBusinessUsersRequest) (*ListBusinessUsersResponse, error)
+	SetBusinessUserActive(context.Context, *SetBusinessUserActiveRequest) (*SetBusinessUserActiveResponse, error)
 	RequestPasswordReset(context.Context, *RequestPasswordResetRequest) (*RequestPasswordResetResponse, error)
 	ResetPassword(context.Context, *ResetPasswordRequest) (*ResetPasswordResponse, error)
 	ListAuditLogs(context.Context, *ListAuditLogsRequest) (*ListAuditLogsResponse, error)
@@ -164,6 +190,12 @@ func (UnimplementedUserAuthServiceServer) RegisterBusiness(context.Context, *Reg
 }
 func (UnimplementedUserAuthServiceServer) RegisterAdmin(context.Context, *RegisterAdminRequest) (*RegisterAdminResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RegisterAdmin not implemented")
+}
+func (UnimplementedUserAuthServiceServer) ListBusinessUsers(context.Context, *ListBusinessUsersRequest) (*ListBusinessUsersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListBusinessUsers not implemented")
+}
+func (UnimplementedUserAuthServiceServer) SetBusinessUserActive(context.Context, *SetBusinessUserActiveRequest) (*SetBusinessUserActiveResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SetBusinessUserActive not implemented")
 }
 func (UnimplementedUserAuthServiceServer) RequestPasswordReset(context.Context, *RequestPasswordResetRequest) (*RequestPasswordResetResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method RequestPasswordReset not implemented")
@@ -270,6 +302,42 @@ func _UserAuthService_RegisterAdmin_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UserAuthService_ListBusinessUsers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListBusinessUsersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserAuthServiceServer).ListBusinessUsers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserAuthService_ListBusinessUsers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserAuthServiceServer).ListBusinessUsers(ctx, req.(*ListBusinessUsersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UserAuthService_SetBusinessUserActive_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetBusinessUserActiveRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserAuthServiceServer).SetBusinessUserActive(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserAuthService_SetBusinessUserActive_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserAuthServiceServer).SetBusinessUserActive(ctx, req.(*SetBusinessUserActiveRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _UserAuthService_RequestPasswordReset_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RequestPasswordResetRequest)
 	if err := dec(in); err != nil {
@@ -364,6 +432,14 @@ var UserAuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "RegisterAdmin",
 			Handler:    _UserAuthService_RegisterAdmin_Handler,
+		},
+		{
+			MethodName: "ListBusinessUsers",
+			Handler:    _UserAuthService_ListBusinessUsers_Handler,
+		},
+		{
+			MethodName: "SetBusinessUserActive",
+			Handler:    _UserAuthService_SetBusinessUserActive_Handler,
 		},
 		{
 			MethodName: "RequestPasswordReset",

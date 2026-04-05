@@ -7,7 +7,7 @@ import (
 )
 
 type Service interface {
-	CreatePaymentSession(ctx context.Context, tripID, userID, driverID string, amount int64, currency string) (*types.PaymentIntent, error)
+	CreatePaymentSession(ctx context.Context, tripID, userID, driverID string, amount int64, currency, packageSlug string) (*types.PaymentIntent, error)
 }
 
 type PaymentProcessor interface {

@@ -27,7 +27,15 @@ func userSummary(u *domain.User) *pb.UserSummary {
 	if u == nil {
 		return nil
 	}
-	return &pb.UserSummary{Id: u.ID, Email: u.Email, Role: u.Role}
+	s := &pb.UserSummary{
+		Id:              u.ID,
+		Email:           u.Email,
+		Role:            u.Role,
+		IsActive:        u.IsActive,
+		CanCreateAdmins: u.CanCreateAdmins,
+		CanDeleteData:   u.CanDeleteData,
+	}
+	return s
 }
 
 func (h *authHandler) LoginLocal(ctx context.Context, req *pb.LoginLocalRequest) (*pb.LoginLocalResponse, error) {
@@ -37,6 +45,8 @@ func (h *authHandler) LoginLocal(ctx context.Context, req *pb.LoginLocalRequest)
 		case errors.Is(err, service.ErrInvalidCredentials):
 			return nil, status.Error(codes.Unauthenticated, err.Error())
 		case errors.Is(err, service.ErrCustomerUseGoogle):
+			return nil, status.Error(codes.PermissionDenied, err.Error())
+		case errors.Is(err, service.ErrAccountInactive):
 			return nil, status.Error(codes.PermissionDenied, err.Error())
 		default:
 			return nil, status.Errorf(codes.Internal, "%v", err)
@@ -57,6 +67,8 @@ func (h *authHandler) GoogleVerify(ctx context.Context, req *pb.GoogleVerifyRequ
 			return nil, status.Error(codes.Unauthenticated, err.Error())
 		case errors.Is(err, service.ErrGoogleUpsertDenied):
 			return nil, status.Errorf(codes.PermissionDenied, "%v", err)
+		case errors.Is(err, service.ErrAccountInactive):
+			return nil, status.Error(codes.PermissionDenied, err.Error())
 		default:
 			return nil, status.Errorf(codes.Internal, "%v", err)
 		}
@@ -80,10 +92,13 @@ func (h *authHandler) RegisterBusiness(ctx context.Context, req *pb.RegisterBusi
 }
 
 func (h *authHandler) RegisterAdmin(ctx context.Context, req *pb.RegisterAdminRequest) (*pb.RegisterAdminResponse, error) {
-	u, err := h.svc.RegisterAdmin(ctx, req.GetAdminUserId(), req.GetEmail(), req.GetPassword())
+	u, err := h.svc.RegisterAdmin(ctx, req.GetAdminUserId(), req.GetEmail(), req.GetPassword(),
+		req.GetCanCreateAdmins(), req.GetCanDeleteData())
 	if err != nil {
 		switch {
 		case errors.Is(err, service.ErrAdminOnly):
+			return nil, status.Error(codes.PermissionDenied, err.Error())
+		case errors.Is(err, service.ErrCannotCreateAdmins):
 			return nil, status.Error(codes.PermissionDenied, err.Error())
 		case errors.Is(err, service.ErrRegisterUserConflict):
 			return nil, status.Errorf(codes.AlreadyExists, "%v", err)
@@ -92,6 +107,38 @@ func (h *authHandler) RegisterAdmin(ctx context.Context, req *pb.RegisterAdminRe
 		}
 	}
 	return &pb.RegisterAdminResponse{User: userSummary(u)}, nil
+}
+
+func (h *authHandler) ListBusinessUsers(ctx context.Context, req *pb.ListBusinessUsersRequest) (*pb.ListBusinessUsersResponse, error) {
+	if req.GetAdminUserId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "admin_user_id required")
+	}
+	users, err := h.svc.ListBusinessUsers(ctx, req.GetAdminUserId())
+	if err != nil {
+		if errors.Is(err, service.ErrAdminOnly) {
+			return nil, status.Error(codes.PermissionDenied, err.Error())
+		}
+		return nil, status.Errorf(codes.Internal, "%v", err)
+	}
+	return &pb.ListBusinessUsersResponse{Users: users}, nil
+}
+
+func (h *authHandler) SetBusinessUserActive(ctx context.Context, req *pb.SetBusinessUserActiveRequest) (*pb.SetBusinessUserActiveResponse, error) {
+	if req.GetAdminUserId() == "" || req.GetBusinessUserId() == "" {
+		return nil, status.Error(codes.InvalidArgument, "admin_user_id and business_user_id required")
+	}
+	u, err := h.svc.SetBusinessUserActive(ctx, req.GetAdminUserId(), req.GetBusinessUserId(), req.GetIsActive())
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrAdminOnly):
+			return nil, status.Error(codes.PermissionDenied, err.Error())
+		case errors.Is(err, service.ErrBusinessUserNotFound):
+			return nil, status.Error(codes.NotFound, err.Error())
+		default:
+			return nil, status.Errorf(codes.Internal, "%v", err)
+		}
+	}
+	return &pb.SetBusinessUserActiveResponse{User: userSummary(u)}, nil
 }
 
 func (h *authHandler) RequestPasswordReset(ctx context.Context, req *pb.RequestPasswordResetRequest) (*pb.RequestPasswordResetResponse, error) {

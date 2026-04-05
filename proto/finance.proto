@@ -6,9 +6,11 @@ option go_package = "shared/proto/finance;finance";
 
 service FinanceService {
   rpc GetMyTransactions(GetMyTransactionsRequest) returns (GetMyTransactionsResponse);
+  rpc GetCustomerDashboard(GetCustomerDashboardRequest) returns (GetCustomerDashboardResponse);
   rpc GetGlobalRevenue(GetGlobalRevenueRequest) returns (GetGlobalRevenueResponse);
   rpc GetRegionalAnalytics(GetRegionalAnalyticsRequest) returns (GetRegionalAnalyticsResponse);
   rpc GetCategoryInsights(GetCategoryInsightsRequest) returns (GetCategoryInsightsResponse);
+  rpc ListLedger(ListLedgerRequest) returns (ListLedgerResponse);
 }
 
 message Transaction {
@@ -21,6 +23,7 @@ message Transaction {
   string status = 7;
   string source_trip_id = 8;
   string created_at_rfc3339 = 9;
+  string package_slug = 10;
 }
 
 message GetMyTransactionsRequest {
@@ -32,9 +35,34 @@ message GetMyTransactionsResponse {
   repeated Transaction transactions = 1;
 }
 
+message GetCustomerDashboardRequest {
+  string user_id = 1;
+  string from_rfc3339 = 2;
+  string to_rfc3339 = 3;
+  // "day" or "month" for earning_series buckets
+  string series_granularity = 4;
+  int32 recent_limit = 5;
+}
+
+message AmountPoint {
+  string period = 1;
+  int64 amount_cents = 2;
+}
+
+message GetCustomerDashboardResponse {
+  int64 total_income_cents = 1;
+  int64 total_expense_cents = 2;
+  int64 net_cents = 3;
+  string currency = 4;
+  repeated AmountPoint earning_series = 5;
+  repeated Transaction recent = 6;
+}
+
 message GetGlobalRevenueRequest {
   string from_rfc3339 = 1;
   string to_rfc3339 = 2;
+  // "day" | "month" | "year" for trend bucket (default day)
+  string trend_granularity = 3;
 }
 
 message RevenuePoint {
@@ -64,15 +92,50 @@ message GetRegionalAnalyticsResponse {
   string currency = 2;
 }
 
-message GetCategoryInsightsRequest {}
+message GetCategoryInsightsRequest {
+  string from_rfc3339 = 1;
+  string to_rfc3339 = 2;
+}
 
 message CategoryInsight {
-  string category = 1;
-  int64 amount_cents = 2;
-  int32 count = 3;
+  // Car package slug (empty if unknown)
+  string package_slug = 1;
+  // Net platform revenue for trips in this package (rider debits, one amount per trip)
+  int64 net_amount_cents = 2;
+  int32 trip_count = 3;
+  int32 distinct_riders = 4;
+  int32 distinct_drivers = 5;
 }
 
 message GetCategoryInsightsResponse {
   repeated CategoryInsight categories = 1;
   string currency = 2;
+}
+
+message LedgerRow {
+  string id = 1;
+  string user_id = 2;
+  string user_email = 3;
+  int64 amount_cents = 4;
+  string currency = 5;
+  string type = 6;
+  string region = 7;
+  string status = 8;
+  string source_trip_id = 9;
+  string package_slug = 10;
+  string created_at_rfc3339 = 11;
+}
+
+message ListLedgerRequest {
+  int32 limit = 1;
+  string filter_user_id = 2;
+  string filter_trip_id = 3;
+  string filter_email_contains = 4;
+  string filter_package_slug = 5;
+  string filter_rider_user_id = 6;
+  string filter_driver_user_id = 7;
+}
+
+message ListLedgerResponse {
+  repeated LedgerRow rows = 1;
 }

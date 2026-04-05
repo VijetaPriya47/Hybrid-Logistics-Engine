@@ -199,12 +199,13 @@ func handleStripeWebhook(w http.ResponseWriter, r *http.Request, rb *messaging.R
 			cur = "usd"
 		}
 		payload := messaging.PaymentStatusUpdateData{
-			TripID:      tripID,
-			UserID:      userID,
-			DriverID:    session.Metadata["driver_id"],
-			AmountCents: session.AmountTotal,
-			Currency:    cur,
-			Region:      region,
+			TripID:       tripID,
+			UserID:       userID,
+			DriverID:     session.Metadata["driver_id"],
+			AmountCents:  session.AmountTotal,
+			Currency:     cur,
+			Region:       region,
+			PackageSlug:  session.Metadata["package_slug"],
 		}
 
 		payloadBytes, err := json.Marshal(payload)

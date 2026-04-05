@@ -30,11 +30,13 @@ func (s *paymentService) CreatePaymentSession(
 	driverID string,
 	amount int64,
 	currency string,
+	packageSlug string,
 ) (*types.PaymentIntent, error) {
 	metadata := map[string]string{
-		"trip_id":   tripID,
-		"user_id":   userID,
-		"driver_id": driverID,
+		"trip_id":      tripID,
+		"user_id":      userID,
+		"driver_id":    driverID,
+		"package_slug": packageSlug,
 	}
 
 	sessionID, err := s.paymentProcessor.CreatePaymentSession(ctx, amount, currency, metadata)

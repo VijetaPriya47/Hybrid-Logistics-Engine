@@ -30,61 +30,70 @@ func NewPostgresUserRepository(pool *pgxpool.Pool) *PostgresUserRepository {
 	return &PostgresUserRepository{Pool: pool}
 }
 
+const userSelectCols = `id::text, email, role, password_hash, google_sub, is_active, can_create_admins, can_delete_data, created_by_admin_id::text`
+
+func scanUser(row pgx.Row) (*domain.User, error) {
+	var u domain.User
+	var gh, pw, createdBy *string
+	err := row.Scan(&u.ID, &u.Email, &u.Role, &pw, &gh, &u.IsActive, &u.CanCreateAdmins, &u.CanDeleteData, &createdBy)
+	if err != nil {
+		return nil, err
+	}
+	u.PasswordHash = pw
+	u.GoogleSub = gh
+	u.CreatedByAdminID = createdBy
+	return &u, nil
+}
+
 func (r *PostgresUserRepository) EnsureSuperAdmin(ctx context.Context, email, plainPassword string) error {
 	email = strings.ToLower(strings.TrimSpace(email))
 	if email == "" || plainPassword == "" {
 		return nil
 	}
 	var n int
-	_ = r.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM users WHERE email = $1`, email).Scan(&n)
+	_ = r.Pool.QueryRow(ctx, `SELECT COUNT(*) FROM users WHERE lower(email) = $1`, email).Scan(&n)
 	if n > 0 {
-		return nil
+		_, err := r.Pool.Exec(ctx, `
+UPDATE users SET can_create_admins = true, can_delete_data = true
+WHERE lower(email) = $1 AND role = 'admin'`, email)
+		return err
 	}
 	hash, err := hashPassword(plainPassword)
 	if err != nil {
 		return err
 	}
 	_, err = r.Pool.Exec(ctx, `
-INSERT INTO users (email, password_hash, role) VALUES ($1, $2, 'admin')`, email, hash)
+INSERT INTO users (email, password_hash, role, can_create_admins, can_delete_data)
+VALUES ($1, $2, 'admin', true, true)`, email, hash)
 	return err
 }
 
 func (r *PostgresUserRepository) GetUserByID(ctx context.Context, id string) (*domain.User, error) {
-	var u domain.User
-	var gh, pw *string
-	err := r.Pool.QueryRow(ctx, `
-SELECT id::text, email, role, password_hash, google_sub FROM users WHERE id = $1::uuid`, id).
-		Scan(&u.ID, &u.Email, &u.Role, &pw, &gh)
+	u, err := scanUser(r.Pool.QueryRow(ctx, `
+SELECT `+userSelectCols+` FROM users WHERE id = $1::uuid`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	u.PasswordHash = pw
-	u.GoogleSub = gh
-	return &u, nil
+	return u, nil
 }
 
 func (r *PostgresUserRepository) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
 	email = strings.ToLower(strings.TrimSpace(email))
-	var u domain.User
-	var gh, pw *string
-	err := r.Pool.QueryRow(ctx, `
-SELECT id::text, email, role, password_hash, google_sub FROM users WHERE lower(email) = $1`, email).
-		Scan(&u.ID, &u.Email, &u.Role, &pw, &gh)
+	u, err := scanUser(r.Pool.QueryRow(ctx, `
+SELECT `+userSelectCols+` FROM users WHERE lower(email) = $1`, email))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	u.PasswordHash = pw
-	u.GoogleSub = gh
-	return &u, nil
+	return u, nil
 }
 
-func (r *PostgresUserRepository) CreateLocalUser(ctx context.Context, email, plainPassword, role string) (*domain.User, error) {
+func (r *PostgresUserRepository) CreateLocalUser(ctx context.Context, email, plainPassword, role string, opts domain.LocalUserCreateOpts) (*domain.User, error) {
 	if role != authjwt.RoleBusiness && role != authjwt.RoleAdmin {
 		return nil, fmt.Errorf("invalid role")
 	}
@@ -94,12 +103,24 @@ func (r *PostgresUserRepository) CreateLocalUser(ctx context.Context, email, pla
 		return nil, err
 	}
 	id := uuid.New()
-	_, err = r.Pool.Exec(ctx, `
-INSERT INTO users (id, email, password_hash, role) VALUES ($1, $2, $3, $4)`, id, email, hash, role)
+	if role == authjwt.RoleBusiness {
+		if opts.CreatedByAdminID == nil || *opts.CreatedByAdminID == "" {
+			return nil, fmt.Errorf("created_by_admin_id required for business user")
+		}
+		_, err = r.Pool.Exec(ctx, `
+INSERT INTO users (id, email, password_hash, role, created_by_admin_id, can_create_admins, can_delete_data)
+VALUES ($1, $2, $3, $4, $5::uuid, false, false)`,
+			id, email, hash, role, *opts.CreatedByAdminID)
+	} else {
+		_, err = r.Pool.Exec(ctx, `
+INSERT INTO users (id, email, password_hash, role, can_create_admins, can_delete_data)
+VALUES ($1, $2, $3, $4, $5, $6)`,
+			id, email, hash, role, opts.CanCreateAdmins, opts.CanDeleteData)
+	}
 	if err != nil {
 		return nil, err
 	}
-	return &domain.User{ID: id.String(), Email: email, Role: role}, nil
+	return r.GetUserByID(ctx, id.String())
 }
 
 func (r *PostgresUserRepository) UpsertGoogleCustomer(ctx context.Context, googleSub, email string) (*domain.User, error) {
@@ -108,9 +129,14 @@ func (r *PostgresUserRepository) UpsertGoogleCustomer(ctx context.Context, googl
 		return nil, fmt.Errorf("missing claims")
 	}
 	var u domain.User
+	var gh *string
 	err := r.Pool.QueryRow(ctx, `
-SELECT id::text, email, role FROM users WHERE google_sub = $1`, googleSub).Scan(&u.ID, &u.Email, &u.Role)
+SELECT id::text, email, role, google_sub, is_active FROM users WHERE google_sub = $1`, googleSub).
+		Scan(&u.ID, &u.Email, &u.Role, &gh, &u.IsActive)
 	if err == nil {
+		u.GoogleSub = gh
+		u.CanCreateAdmins = false
+		u.CanDeleteData = false
 		return &u, nil
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
@@ -118,12 +144,16 @@ SELECT id::text, email, role FROM users WHERE google_sub = $1`, googleSub).Scan(
 	}
 	var existingID, existingEmail, existingRole string
 	var existingSub *string
+	var existingActive bool
 	err = r.Pool.QueryRow(ctx, `
-SELECT id::text, email, role, google_sub FROM users WHERE lower(email) = $1`, email).
-		Scan(&existingID, &existingEmail, &existingRole, &existingSub)
+SELECT id::text, email, role, google_sub, is_active FROM users WHERE lower(email) = $1`, email).
+		Scan(&existingID, &existingEmail, &existingRole, &existingSub, &existingActive)
 	if err == nil {
 		if existingSub != nil && *existingSub == googleSub {
-			return &domain.User{ID: existingID, Email: existingEmail, Role: existingRole}, nil
+			return &domain.User{
+				ID: existingID, Email: existingEmail, Role: existingRole, GoogleSub: existingSub,
+				IsActive: existingActive, CanCreateAdmins: false, CanDeleteData: false,
+			}, nil
 		}
 		return nil, fmt.Errorf("email already registered with a different login method")
 	}
@@ -136,7 +166,47 @@ INSERT INTO users (id, email, role, google_sub) VALUES ($1, $2, 'customer', $3)`
 	if err != nil {
 		return nil, err
 	}
-	return &domain.User{ID: id.String(), Email: email, Role: authjwt.RoleCustomer}, nil
+	return &domain.User{
+		ID: id.String(), Email: email, Role: authjwt.RoleCustomer, GoogleSub: &googleSub,
+		IsActive: true, CanCreateAdmins: false, CanDeleteData: false,
+	}, nil
+}
+
+func (r *PostgresUserRepository) ListBusinessUsers(ctx context.Context) ([]*pb.BusinessUserRow, error) {
+	rows, err := r.Pool.Query(ctx, `
+SELECT u.id::text, u.email, u.is_active, COALESCE(creator.email, ''), u.created_at
+FROM users u
+LEFT JOIN users creator ON creator.id = u.created_by_admin_id
+WHERE u.role = 'business'
+ORDER BY u.created_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []*pb.BusinessUserRow
+	for rows.Next() {
+		var row pb.BusinessUserRow
+		var ts time.Time
+		if err := rows.Scan(&row.Id, &row.Email, &row.IsActive, &row.CreatedByAdminEmail, &ts); err != nil {
+			return nil, err
+		}
+		row.CreatedAtRfc3339 = ts.UTC().Format(time.RFC3339)
+		out = append(out, &row)
+	}
+	return out, rows.Err()
+}
+
+func (r *PostgresUserRepository) SetBusinessUserActive(ctx context.Context, businessUserID string, active bool) (*domain.User, error) {
+	tag, err := r.Pool.Exec(ctx, `
+UPDATE users SET is_active = $2, updated_at = now()
+WHERE id = $1::uuid AND role = 'business'`, businessUserID, active)
+	if err != nil {
+		return nil, err
+	}
+	if tag.RowsAffected() == 0 {
+		return nil, nil
+	}
+	return r.GetUserByID(ctx, businessUserID)
 }
 
 func (r *PostgresUserRepository) InsertAuditLog(ctx context.Context, method, path, actorID, role, ip, detailJSON string) error {

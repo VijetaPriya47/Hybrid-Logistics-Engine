@@ -76,7 +76,7 @@ func rbacAllowed(role, path, method string) bool {
 	if strings.HasPrefix(path, "/api/finance/dashboard") {
 		return role == authjwt.RoleBusiness || role == authjwt.RoleAdmin
 	}
-	if path == "/api/finance/me" && method == http.MethodGet {
+	if (path == "/api/finance/me" || path == "/api/finance/me/summary") && method == http.MethodGet {
 		return role == authjwt.RoleCustomer
 	}
 	if path == "/api/trips/history" && method == http.MethodGet {

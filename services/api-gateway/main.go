@@ -91,6 +91,9 @@ func main() {
 	mux.HandleFunc("/api/finance/me", func(w http.ResponseWriter, r *http.Request) {
 		handleFinanceMe(w, r, platformGRPC.Finance)
 	})
+	mux.HandleFunc("/api/finance/me/summary", func(w http.ResponseWriter, r *http.Request) {
+		handleFinanceMeSummary(w, r, platformGRPC.Finance)
+	})
 	mux.HandleFunc("/api/trips/history", func(w http.ResponseWriter, r *http.Request) {
 		handleTripHistory(w, r, tripGRPC)
 	})
@@ -108,7 +111,10 @@ func main() {
 		handleAdminSystemLogs(w, r, platformGRPC.Auth)
 	})
 	mux.HandleFunc("/api/admin/users/business", func(w http.ResponseWriter, r *http.Request) {
-		handleAdminRegisterBusiness(w, r, platformGRPC.Auth)
+		handleAdminUsersBusiness(w, r, platformGRPC.Auth)
+	})
+	mux.HandleFunc("/api/admin/transactions", func(w http.ResponseWriter, r *http.Request) {
+		handleAdminTransactions(w, r, platformGRPC.Finance)
 	})
 	mux.HandleFunc("/api/admin/users/admin", func(w http.ResponseWriter, r *http.Request) {
 		handleAdminRegisterAdmin(w, r, platformGRPC.Auth)

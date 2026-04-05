@@ -20,9 +20,11 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	FinanceService_GetMyTransactions_FullMethodName    = "/finance.FinanceService/GetMyTransactions"
+	FinanceService_GetCustomerDashboard_FullMethodName = "/finance.FinanceService/GetCustomerDashboard"
 	FinanceService_GetGlobalRevenue_FullMethodName     = "/finance.FinanceService/GetGlobalRevenue"
 	FinanceService_GetRegionalAnalytics_FullMethodName = "/finance.FinanceService/GetRegionalAnalytics"
 	FinanceService_GetCategoryInsights_FullMethodName  = "/finance.FinanceService/GetCategoryInsights"
+	FinanceService_ListLedger_FullMethodName           = "/finance.FinanceService/ListLedger"
 )
 
 // FinanceServiceClient is the client API for FinanceService service.
@@ -30,9 +32,11 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type FinanceServiceClient interface {
 	GetMyTransactions(ctx context.Context, in *GetMyTransactionsRequest, opts ...grpc.CallOption) (*GetMyTransactionsResponse, error)
+	GetCustomerDashboard(ctx context.Context, in *GetCustomerDashboardRequest, opts ...grpc.CallOption) (*GetCustomerDashboardResponse, error)
 	GetGlobalRevenue(ctx context.Context, in *GetGlobalRevenueRequest, opts ...grpc.CallOption) (*GetGlobalRevenueResponse, error)
 	GetRegionalAnalytics(ctx context.Context, in *GetRegionalAnalyticsRequest, opts ...grpc.CallOption) (*GetRegionalAnalyticsResponse, error)
 	GetCategoryInsights(ctx context.Context, in *GetCategoryInsightsRequest, opts ...grpc.CallOption) (*GetCategoryInsightsResponse, error)
+	ListLedger(ctx context.Context, in *ListLedgerRequest, opts ...grpc.CallOption) (*ListLedgerResponse, error)
 }
 
 type financeServiceClient struct {
@@ -47,6 +51,16 @@ func (c *financeServiceClient) GetMyTransactions(ctx context.Context, in *GetMyT
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetMyTransactionsResponse)
 	err := c.cc.Invoke(ctx, FinanceService_GetMyTransactions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *financeServiceClient) GetCustomerDashboard(ctx context.Context, in *GetCustomerDashboardRequest, opts ...grpc.CallOption) (*GetCustomerDashboardResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCustomerDashboardResponse)
+	err := c.cc.Invoke(ctx, FinanceService_GetCustomerDashboard_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -83,14 +97,26 @@ func (c *financeServiceClient) GetCategoryInsights(ctx context.Context, in *GetC
 	return out, nil
 }
 
+func (c *financeServiceClient) ListLedger(ctx context.Context, in *ListLedgerRequest, opts ...grpc.CallOption) (*ListLedgerResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListLedgerResponse)
+	err := c.cc.Invoke(ctx, FinanceService_ListLedger_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FinanceServiceServer is the server API for FinanceService service.
 // All implementations must embed UnimplementedFinanceServiceServer
 // for forward compatibility.
 type FinanceServiceServer interface {
 	GetMyTransactions(context.Context, *GetMyTransactionsRequest) (*GetMyTransactionsResponse, error)
+	GetCustomerDashboard(context.Context, *GetCustomerDashboardRequest) (*GetCustomerDashboardResponse, error)
 	GetGlobalRevenue(context.Context, *GetGlobalRevenueRequest) (*GetGlobalRevenueResponse, error)
 	GetRegionalAnalytics(context.Context, *GetRegionalAnalyticsRequest) (*GetRegionalAnalyticsResponse, error)
 	GetCategoryInsights(context.Context, *GetCategoryInsightsRequest) (*GetCategoryInsightsResponse, error)
+	ListLedger(context.Context, *ListLedgerRequest) (*ListLedgerResponse, error)
 	mustEmbedUnimplementedFinanceServiceServer()
 }
 
@@ -104,6 +130,9 @@ type UnimplementedFinanceServiceServer struct{}
 func (UnimplementedFinanceServiceServer) GetMyTransactions(context.Context, *GetMyTransactionsRequest) (*GetMyTransactionsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetMyTransactions not implemented")
 }
+func (UnimplementedFinanceServiceServer) GetCustomerDashboard(context.Context, *GetCustomerDashboardRequest) (*GetCustomerDashboardResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetCustomerDashboard not implemented")
+}
 func (UnimplementedFinanceServiceServer) GetGlobalRevenue(context.Context, *GetGlobalRevenueRequest) (*GetGlobalRevenueResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetGlobalRevenue not implemented")
 }
@@ -112,6 +141,9 @@ func (UnimplementedFinanceServiceServer) GetRegionalAnalytics(context.Context, *
 }
 func (UnimplementedFinanceServiceServer) GetCategoryInsights(context.Context, *GetCategoryInsightsRequest) (*GetCategoryInsightsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetCategoryInsights not implemented")
+}
+func (UnimplementedFinanceServiceServer) ListLedger(context.Context, *ListLedgerRequest) (*ListLedgerResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListLedger not implemented")
 }
 func (UnimplementedFinanceServiceServer) mustEmbedUnimplementedFinanceServiceServer() {}
 func (UnimplementedFinanceServiceServer) testEmbeddedByValue()                        {}
@@ -148,6 +180,24 @@ func _FinanceService_GetMyTransactions_Handler(srv interface{}, ctx context.Cont
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(FinanceServiceServer).GetMyTransactions(ctx, req.(*GetMyTransactionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _FinanceService_GetCustomerDashboard_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCustomerDashboardRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServiceServer).GetCustomerDashboard(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FinanceService_GetCustomerDashboard_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServiceServer).GetCustomerDashboard(ctx, req.(*GetCustomerDashboardRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -206,6 +256,24 @@ func _FinanceService_GetCategoryInsights_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FinanceService_ListLedger_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListLedgerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FinanceServiceServer).ListLedger(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FinanceService_ListLedger_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FinanceServiceServer).ListLedger(ctx, req.(*ListLedgerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FinanceService_ServiceDesc is the grpc.ServiceDesc for FinanceService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -218,6 +286,10 @@ var FinanceService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _FinanceService_GetMyTransactions_Handler,
 		},
 		{
+			MethodName: "GetCustomerDashboard",
+			Handler:    _FinanceService_GetCustomerDashboard_Handler,
+		},
+		{
 			MethodName: "GetGlobalRevenue",
 			Handler:    _FinanceService_GetGlobalRevenue_Handler,
 		},
@@ -228,6 +300,10 @@ var FinanceService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetCategoryInsights",
 			Handler:    _FinanceService_GetCategoryInsights_Handler,
+		},
+		{
+			MethodName: "ListLedger",
+			Handler:    _FinanceService_ListLedger_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

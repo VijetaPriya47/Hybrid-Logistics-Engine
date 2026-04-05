@@ -31,6 +31,16 @@ func handleAuthLogin(w http.ResponseWriter, r *http.Request, auth *grpc_clients.
 		Email: body.Email, Password: body.Password,
 	})
 	if err != nil {
+		if st, ok := status.FromError(err); ok {
+			switch st.Code() {
+			case codes.PermissionDenied:
+				writeJSONError(w, http.StatusForbidden, st.Message())
+				return
+			case codes.Unauthenticated:
+				writeJSONError(w, http.StatusUnauthorized, st.Message())
+				return
+			}
+		}
 		writeJSONError(w, http.StatusUnauthorized, "login failed")
 		return
 	}

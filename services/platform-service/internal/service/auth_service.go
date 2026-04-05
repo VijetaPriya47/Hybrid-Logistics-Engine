@@ -43,7 +43,11 @@ func (s *authService) jwtForUser(u *domain.User) (string, error) {
 			ttl = d
 		}
 	}
-	return authjwt.Sign(secret, iss, aud, u.ID, u.Email, u.Role, ttl)
+	cca, cdd := false, false
+	if u.Role == authjwt.RoleAdmin {
+		cca, cdd = u.CanCreateAdmins, u.CanDeleteData
+	}
+	return authjwt.Sign(secret, iss, aud, u.ID, u.Email, u.Role, ttl, cca, cdd)
 }
 
 func (s *authService) LoginLocal(ctx context.Context, email, password string) (string, *domain.User, error) {
@@ -56,6 +60,9 @@ func (s *authService) LoginLocal(ctx context.Context, email, password string) (s
 	}
 	if u.Role == authjwt.RoleCustomer {
 		return "", nil, ErrCustomerUseGoogle
+	}
+	if u.Role == authjwt.RoleBusiness && !u.IsActive {
+		return "", nil, ErrAccountInactive
 	}
 	if err := repository.ComparePasswordHash(*u.PasswordHash, password); err != nil {
 		return "", nil, ErrInvalidCredentials
@@ -77,6 +84,9 @@ var (
 	ErrRegisterUserConflict = errors.New("user registration conflict")
 	ErrInvalidAuditBefore   = errors.New("invalid before_ts")
 	ErrGoogleUpsertDenied   = errors.New("google account upsert denied")
+	ErrAccountInactive      = errors.New("account is inactive")
+	ErrCannotCreateAdmins   = errors.New("not allowed to create administrators")
+	ErrBusinessUserNotFound = errors.New("business user not found")
 )
 
 func (s *authService) GoogleVerify(ctx context.Context, idToken string) (string, *domain.User, error) {
@@ -96,6 +106,9 @@ func (s *authService) GoogleVerify(ctx context.Context, idToken string) (string,
 	if err != nil {
 		return "", nil, fmt.Errorf("%w: %v", ErrGoogleUpsertDenied, err)
 	}
+	if !u.IsActive {
+		return "", nil, ErrAccountInactive
+	}
 	tok, err := s.jwtForUser(u)
 	if err != nil {
 		return "", nil, err
@@ -111,14 +124,20 @@ func (s *authService) RegisterBusiness(ctx context.Context, adminUserID, email, 
 	if admin == nil || admin.Role != authjwt.RoleAdmin {
 		return nil, ErrAdminOnly
 	}
-	u, err := s.repo.CreateLocalUser(ctx, email, password, authjwt.RoleBusiness)
+	if !admin.IsActive {
+		return nil, ErrAdminOnly
+	}
+	aid := adminUserID
+	u, err := s.repo.CreateLocalUser(ctx, email, password, authjwt.RoleBusiness, domain.LocalUserCreateOpts{
+		CreatedByAdminID: &aid,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrRegisterUserConflict, err)
 	}
 	return u, nil
 }
 
-func (s *authService) RegisterAdmin(ctx context.Context, adminUserID, email, password string) (*domain.User, error) {
+func (s *authService) RegisterAdmin(ctx context.Context, adminUserID, email, password string, canCreateAdmins, canDeleteData bool) (*domain.User, error) {
 	admin, err := s.repo.GetUserByID(ctx, adminUserID)
 	if err != nil {
 		return nil, err
@@ -126,9 +145,47 @@ func (s *authService) RegisterAdmin(ctx context.Context, adminUserID, email, pas
 	if admin == nil || admin.Role != authjwt.RoleAdmin {
 		return nil, ErrAdminOnly
 	}
-	u, err := s.repo.CreateLocalUser(ctx, email, password, authjwt.RoleAdmin)
+	if !admin.IsActive {
+		return nil, ErrAdminOnly
+	}
+	if !admin.CanCreateAdmins {
+		return nil, ErrCannotCreateAdmins
+	}
+	u, err := s.repo.CreateLocalUser(ctx, email, password, authjwt.RoleAdmin, domain.LocalUserCreateOpts{
+		CanCreateAdmins: canCreateAdmins,
+		CanDeleteData:   canDeleteData,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrRegisterUserConflict, err)
+	}
+	return u, nil
+}
+
+func (s *authService) ListBusinessUsers(ctx context.Context, adminUserID string) ([]*pb.BusinessUserRow, error) {
+	admin, err := s.repo.GetUserByID(ctx, adminUserID)
+	if err != nil {
+		return nil, err
+	}
+	if admin == nil || admin.Role != authjwt.RoleAdmin || !admin.IsActive {
+		return nil, ErrAdminOnly
+	}
+	return s.repo.ListBusinessUsers(ctx)
+}
+
+func (s *authService) SetBusinessUserActive(ctx context.Context, adminUserID, businessUserID string, active bool) (*domain.User, error) {
+	admin, err := s.repo.GetUserByID(ctx, adminUserID)
+	if err != nil {
+		return nil, err
+	}
+	if admin == nil || admin.Role != authjwt.RoleAdmin || !admin.IsActive {
+		return nil, ErrAdminOnly
+	}
+	u, err := s.repo.SetBusinessUserActive(ctx, businessUserID, active)
+	if err != nil {
+		return nil, err
+	}
+	if u == nil {
+		return nil, ErrBusinessUserNotFound
 	}
 	return u, nil
 }

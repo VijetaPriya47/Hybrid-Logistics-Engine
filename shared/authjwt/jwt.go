@@ -15,19 +15,23 @@ const (
 )
 
 type Claims struct {
-	Email string `json:"email"`
-	Role  string `json:"role"`
+	Email             string `json:"email"`
+	Role              string `json:"role"`
+	CanCreateAdmins   bool   `json:"can_create_admins,omitempty"`
+	CanDeleteData     bool   `json:"can_delete_data,omitempty"`
 	jwt.RegisteredClaims
 }
 
-func Sign(secret []byte, issuer, audience, sub, email, role string, ttl time.Duration) (string, error) {
+func Sign(secret []byte, issuer, audience, sub, email, role string, ttl time.Duration, canCreateAdmins, canDeleteData bool) (string, error) {
 	if len(secret) == 0 {
 		return "", errors.New("empty jwt secret")
 	}
 	now := time.Now()
 	claims := Claims{
-		Email: email,
-		Role:  role,
+		Email:           email,
+		Role:            role,
+		CanCreateAdmins: canCreateAdmins,
+		CanDeleteData:   canDeleteData,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   sub,
 			Issuer:    issuer,
@@ -35,6 +39,10 @@ func Sign(secret []byte, issuer, audience, sub, email, role string, ttl time.Dur
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),
 		},
+	}
+	if role != RoleAdmin {
+		claims.CanCreateAdmins = false
+		claims.CanDeleteData = false
 	}
 	t := jwt.NewWithClaims(jwt.SigningMethodHS256, &claims)
 	return t.SignedString(secret)

@@ -46,11 +46,12 @@ type PaymentEventSessionCreatedData struct {
 }
 
 type PaymentTripResponseData struct {
-	TripID   string  `json:"tripID"`
-	UserID   string  `json:"userID"`
-	DriverID string  `json:"driverID"`
-	Amount   float64 `json:"amount"`
-	Currency string  `json:"currency"`
+	TripID      string  `json:"tripID"`
+	UserID      string  `json:"userID"`
+	DriverID    string  `json:"driverID"`
+	Amount      float64 `json:"amount"`
+	Currency    string  `json:"currency"`
+	PackageSlug string  `json:"packageSlug,omitempty"`
 }
 
 type PaymentStatusUpdateData struct {
@@ -60,6 +61,7 @@ type PaymentStatusUpdateData struct {
 	AmountCents int64  `json:"amountCents,omitempty"`
 	Currency    string `json:"currency,omitempty"`
 	Region      string `json:"region,omitempty"`
+	PackageSlug string `json:"packageSlug,omitempty"`
 }
 
 // AuditLogPayload is published by the API gateway for state-changing requests (JSON body of AmqpMessage.Data).

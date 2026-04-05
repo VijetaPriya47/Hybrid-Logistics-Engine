@@ -60,6 +60,7 @@ func (c *TripConsumer) handleTripAccepted(ctx context.Context, payload messaging
 		payload.DriverID,
 		int64(payload.Amount),
 		payload.Currency,
+		payload.PackageSlug,
 	)
 	if err != nil {
 		log.Printf("Failed to create payment session: %v", err)

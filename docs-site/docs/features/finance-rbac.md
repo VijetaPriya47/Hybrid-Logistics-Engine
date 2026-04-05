@@ -11,9 +11,11 @@ RideSync adds a non-destructive finance ledger, user authentication with three r
 
 | Role | Auth | Trip APIs | Finance |
 |------|------|-----------|---------|
-| `customer` | Google ID token (`POST /api/auth/google`) | `/trip/*`, `POST /api/trips/book` | `GET /api/finance/me` (ledger), `GET /api/trips/history` (ride history) |
+| `customer` | Google ID token (`POST /api/auth/google`) | `/trip/*`, `POST /api/trips/book` | `GET /api/finance/me`, `GET /api/finance/me/summary`, `GET /api/trips/history` |
 | `business` | Email/password (`POST /api/auth/login`) | Denied | `GET /api/finance/dashboard/*` |
-| `admin` | Email/password | Denied | Dashboard + `GET /api/admin/system-logs` + user provisioning |
+| `admin` | Email/password | Denied | Same dashboards as business + admin APIs below |
+
+Inactive business accounts cannot sign in (`PermissionDenied`).
 
 ## HTTP routes (gateway)
 
@@ -21,13 +23,24 @@ RideSync adds a non-destructive finance ledger, user authentication with three r
 
 **Authenticated:** All other routes require `Authorization: Bearer <jwt>`.
 
-- `GET /api/finance/me` — customer; lists payment ledger rows from `platform-service` (`FinanceService` gRPC).
-- `GET /api/trips/history` — customer; lists MongoDB trips where the user is the **rider** (`userID`) or **assigned driver** (`driver.id`), newest first (`TripService.ListMyTrips` gRPC). The web **Ride history** page (`/finance/me`) uses this endpoint.
-- `GET /api/finance/dashboard/revenue|regions|categories` — business or admin; query params `from`, `to` (RFC3339) where supported.
-- `GET /api/admin/system-logs` — admin; query `limit`, `before` (RFC3339).
-- `POST /api/admin/users/business`, `POST /api/admin/users/admin` — admin only.
+- `GET /api/finance/me` — customer; raw ledger rows (`GetMyTransactions`).
+- `GET /api/finance/me/summary` — customer; income, expenses, net, earning series, recent rows (`GetCustomerDashboard`). Query: `from`, `to` (RFC3339), `series_granularity` (`day` \| `month`), `recent_limit`.
+- `GET /api/trips/history` — customer; MongoDB trips for rider or assigned driver (`TripService.ListMyTrips`).
+- `GET /api/finance/dashboard/revenue` — business or admin; query `from`, `to`, `trend_granularity` (`day` \| `month` \| `year`). Totals use **rider debits only** (one amount per trip).
+- `GET /api/finance/dashboard/regions` — business or admin; `from`, `to`.
+- `GET /api/finance/dashboard/categories` — business or admin; `from`, `to`. Groups by car **package**; net per package from debits; rider/driver distinct counts from debits/credits.
+- `GET /api/admin/system-logs` — admin; `limit`, `before` (RFC3339).
+- `GET /api/admin/users/business` — admin; lists business users with **created-by admin email** (`ListBusinessUsers`).
+- `POST /api/admin/users/business` — admin; create business user (stores `created_by_admin_id` in SQL).
+- `PATCH /api/admin/users/business` — admin; JSON `{ "user_id", "is_active" }` toggles business login.
+- `POST /api/admin/users/admin` — admin; JSON `{ "email", "password", "can_create_admins", "can_delete_data" }`. Caller must have `can_create_admins` on their JWT.
+- `GET /api/admin/transactions` — admin; ledger with filters: `limit`, `user_id`, `trip_id`, `email`, `package`, `rider_user_id`, `driver_user_id`.
 
 Trip `userID` in JSON is ignored for identity: the gateway overwrites it with the JWT `sub`.
+
+## JWT claims
+
+Alongside `sub`, `email`, `role`, **admin** tokens include `can_create_admins` and `can_delete_data` (for UI and future delete APIs). Business and customer tokens omit these flags.
 
 ## Environment variables
 
@@ -49,7 +62,7 @@ Trip `userID` in JSON is ignored for identity: the gateway overwrites it with th
 
 ## PostgreSQL
 
-Schema: `infra/sql/001_schema.sql` in the repo (`users`, `password_reset_tokens`, `transactions`, `audit_logs`).
+Schema: `infra/sql/001_schema.sql` (`users` with `is_active`, `can_create_admins`, `can_delete_data`, `created_by_admin_id`; `transactions` with rider **debit** and driver **credit** per trip, `package_slug`; `audit_logs`; etc.).
 
 ## gRPC
 
@@ -68,9 +81,9 @@ make generate-proto
 Next.js routes:
 
 - `/login` — Google (riders/drivers) and email/password (admin/business); forgot-password request; requires `NEXT_PUBLIC_GOOGLE_CLIENT_ID` for Google.
-- `/finance/me` — customer transaction table (JWT).
-- `/dashboard` — business/admin finance JSON panels (revenue, regions, categories).
-- `/admin` — audit log JSON, create business/admin users.
+- `/finance/me` — customer dashboard (summary, earnings chart, recent ledger colors) plus ride history table.
+- `/dashboard` — business/admin charts and tables for revenue, regions, packages.
+- `/admin` — business overview, audit log table, business users + active toggle, transaction filters, provisioning forms (admin creation requires JWT `can_create_admins`).
 - `/reset-password` — optional `?token=` query or paste token.
 
 The home map flows require a **customer** JWT: sign in before **I Need a Ride** / **I Want to Drive**. Trip HTTP calls send `Authorization: Bearer`.

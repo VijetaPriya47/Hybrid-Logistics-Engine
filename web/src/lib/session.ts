@@ -1,4 +1,11 @@
-export type SessionUser = { id: string; email: string; role: string };
+export type SessionUser = {
+  id: string;
+  email: string;
+  role: string;
+  is_active?: boolean;
+  can_create_admins?: boolean;
+  can_delete_data?: boolean;
+};
 
 const TOKEN_KEY = "ridesync_token";
 const USER_KEY = "ridesync_user";

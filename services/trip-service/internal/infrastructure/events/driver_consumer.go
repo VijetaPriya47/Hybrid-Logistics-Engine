@@ -138,12 +138,17 @@ func (c *driverConsumer) handleTripAccepted(ctx context.Context, tripID string, 
 		return err
 	}
 
+	pkg := ""
+	if trip.RideFare != nil {
+		pkg = trip.RideFare.PackageSlug
+	}
 	marshalledPayload, err := json.Marshal(messaging.PaymentTripResponseData{
-		TripID:   tripID,
-		UserID:   trip.UserID,
-		DriverID: driver.Id,
-		Amount:   trip.RideFare.TotalPriceInCents,
-		Currency: "USD",
+		TripID:      tripID,
+		UserID:      trip.UserID,
+		DriverID:    driver.Id,
+		Amount:      trip.RideFare.TotalPriceInCents,
+		Currency:    "USD",
+		PackageSlug: pkg,
 	})
 	if err != nil {
 		return err

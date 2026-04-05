@@ -32,6 +32,7 @@ type Transaction struct {
 	Status           string                 `protobuf:"bytes,7,opt,name=status,proto3" json:"status,omitempty"`
 	SourceTripId     string                 `protobuf:"bytes,8,opt,name=source_trip_id,json=sourceTripId,proto3" json:"source_trip_id,omitempty"`
 	CreatedAtRfc3339 string                 `protobuf:"bytes,9,opt,name=created_at_rfc3339,json=createdAtRfc3339,proto3" json:"created_at_rfc3339,omitempty"`
+	PackageSlug      string                 `protobuf:"bytes,10,opt,name=package_slug,json=packageSlug,proto3" json:"package_slug,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
 }
@@ -125,6 +126,13 @@ func (x *Transaction) GetSourceTripId() string {
 func (x *Transaction) GetCreatedAtRfc3339() string {
 	if x != nil {
 		return x.CreatedAtRfc3339
+	}
+	return ""
+}
+
+func (x *Transaction) GetPackageSlug() string {
+	if x != nil {
+		return x.PackageSlug
 	}
 	return ""
 }
@@ -225,17 +233,232 @@ func (x *GetMyTransactionsResponse) GetTransactions() []*Transaction {
 	return nil
 }
 
-type GetGlobalRevenueRequest struct {
+type GetCustomerDashboardRequest struct {
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	UserId      string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	FromRfc3339 string                 `protobuf:"bytes,2,opt,name=from_rfc3339,json=fromRfc3339,proto3" json:"from_rfc3339,omitempty"`
+	ToRfc3339   string                 `protobuf:"bytes,3,opt,name=to_rfc3339,json=toRfc3339,proto3" json:"to_rfc3339,omitempty"`
+	// "day" or "month" for earning_series buckets
+	SeriesGranularity string `protobuf:"bytes,4,opt,name=series_granularity,json=seriesGranularity,proto3" json:"series_granularity,omitempty"`
+	RecentLimit       int32  `protobuf:"varint,5,opt,name=recent_limit,json=recentLimit,proto3" json:"recent_limit,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *GetCustomerDashboardRequest) Reset() {
+	*x = GetCustomerDashboardRequest{}
+	mi := &file_finance_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCustomerDashboardRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCustomerDashboardRequest) ProtoMessage() {}
+
+func (x *GetCustomerDashboardRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCustomerDashboardRequest.ProtoReflect.Descriptor instead.
+func (*GetCustomerDashboardRequest) Descriptor() ([]byte, []int) {
+	return file_finance_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *GetCustomerDashboardRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *GetCustomerDashboardRequest) GetFromRfc3339() string {
+	if x != nil {
+		return x.FromRfc3339
+	}
+	return ""
+}
+
+func (x *GetCustomerDashboardRequest) GetToRfc3339() string {
+	if x != nil {
+		return x.ToRfc3339
+	}
+	return ""
+}
+
+func (x *GetCustomerDashboardRequest) GetSeriesGranularity() string {
+	if x != nil {
+		return x.SeriesGranularity
+	}
+	return ""
+}
+
+func (x *GetCustomerDashboardRequest) GetRecentLimit() int32 {
+	if x != nil {
+		return x.RecentLimit
+	}
+	return 0
+}
+
+type AmountPoint struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	FromRfc3339   string                 `protobuf:"bytes,1,opt,name=from_rfc3339,json=fromRfc3339,proto3" json:"from_rfc3339,omitempty"`
-	ToRfc3339     string                 `protobuf:"bytes,2,opt,name=to_rfc3339,json=toRfc3339,proto3" json:"to_rfc3339,omitempty"`
+	Period        string                 `protobuf:"bytes,1,opt,name=period,proto3" json:"period,omitempty"`
+	AmountCents   int64                  `protobuf:"varint,2,opt,name=amount_cents,json=amountCents,proto3" json:"amount_cents,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
+func (x *AmountPoint) Reset() {
+	*x = AmountPoint{}
+	mi := &file_finance_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AmountPoint) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AmountPoint) ProtoMessage() {}
+
+func (x *AmountPoint) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AmountPoint.ProtoReflect.Descriptor instead.
+func (*AmountPoint) Descriptor() ([]byte, []int) {
+	return file_finance_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *AmountPoint) GetPeriod() string {
+	if x != nil {
+		return x.Period
+	}
+	return ""
+}
+
+func (x *AmountPoint) GetAmountCents() int64 {
+	if x != nil {
+		return x.AmountCents
+	}
+	return 0
+}
+
+type GetCustomerDashboardResponse struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	TotalIncomeCents  int64                  `protobuf:"varint,1,opt,name=total_income_cents,json=totalIncomeCents,proto3" json:"total_income_cents,omitempty"`
+	TotalExpenseCents int64                  `protobuf:"varint,2,opt,name=total_expense_cents,json=totalExpenseCents,proto3" json:"total_expense_cents,omitempty"`
+	NetCents          int64                  `protobuf:"varint,3,opt,name=net_cents,json=netCents,proto3" json:"net_cents,omitempty"`
+	Currency          string                 `protobuf:"bytes,4,opt,name=currency,proto3" json:"currency,omitempty"`
+	EarningSeries     []*AmountPoint         `protobuf:"bytes,5,rep,name=earning_series,json=earningSeries,proto3" json:"earning_series,omitempty"`
+	Recent            []*Transaction         `protobuf:"bytes,6,rep,name=recent,proto3" json:"recent,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *GetCustomerDashboardResponse) Reset() {
+	*x = GetCustomerDashboardResponse{}
+	mi := &file_finance_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCustomerDashboardResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCustomerDashboardResponse) ProtoMessage() {}
+
+func (x *GetCustomerDashboardResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCustomerDashboardResponse.ProtoReflect.Descriptor instead.
+func (*GetCustomerDashboardResponse) Descriptor() ([]byte, []int) {
+	return file_finance_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *GetCustomerDashboardResponse) GetTotalIncomeCents() int64 {
+	if x != nil {
+		return x.TotalIncomeCents
+	}
+	return 0
+}
+
+func (x *GetCustomerDashboardResponse) GetTotalExpenseCents() int64 {
+	if x != nil {
+		return x.TotalExpenseCents
+	}
+	return 0
+}
+
+func (x *GetCustomerDashboardResponse) GetNetCents() int64 {
+	if x != nil {
+		return x.NetCents
+	}
+	return 0
+}
+
+func (x *GetCustomerDashboardResponse) GetCurrency() string {
+	if x != nil {
+		return x.Currency
+	}
+	return ""
+}
+
+func (x *GetCustomerDashboardResponse) GetEarningSeries() []*AmountPoint {
+	if x != nil {
+		return x.EarningSeries
+	}
+	return nil
+}
+
+func (x *GetCustomerDashboardResponse) GetRecent() []*Transaction {
+	if x != nil {
+		return x.Recent
+	}
+	return nil
+}
+
+type GetGlobalRevenueRequest struct {
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	FromRfc3339 string                 `protobuf:"bytes,1,opt,name=from_rfc3339,json=fromRfc3339,proto3" json:"from_rfc3339,omitempty"`
+	ToRfc3339   string                 `protobuf:"bytes,2,opt,name=to_rfc3339,json=toRfc3339,proto3" json:"to_rfc3339,omitempty"`
+	// "day" | "month" | "year" for trend bucket (default day)
+	TrendGranularity string `protobuf:"bytes,3,opt,name=trend_granularity,json=trendGranularity,proto3" json:"trend_granularity,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
 func (x *GetGlobalRevenueRequest) Reset() {
 	*x = GetGlobalRevenueRequest{}
-	mi := &file_finance_proto_msgTypes[3]
+	mi := &file_finance_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -247,7 +470,7 @@ func (x *GetGlobalRevenueRequest) String() string {
 func (*GetGlobalRevenueRequest) ProtoMessage() {}
 
 func (x *GetGlobalRevenueRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_proto_msgTypes[3]
+	mi := &file_finance_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -260,7 +483,7 @@ func (x *GetGlobalRevenueRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGlobalRevenueRequest.ProtoReflect.Descriptor instead.
 func (*GetGlobalRevenueRequest) Descriptor() ([]byte, []int) {
-	return file_finance_proto_rawDescGZIP(), []int{3}
+	return file_finance_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GetGlobalRevenueRequest) GetFromRfc3339() string {
@@ -277,6 +500,13 @@ func (x *GetGlobalRevenueRequest) GetToRfc3339() string {
 	return ""
 }
 
+func (x *GetGlobalRevenueRequest) GetTrendGranularity() string {
+	if x != nil {
+		return x.TrendGranularity
+	}
+	return ""
+}
+
 type RevenuePoint struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Period        string                 `protobuf:"bytes,1,opt,name=period,proto3" json:"period,omitempty"`
@@ -287,7 +517,7 @@ type RevenuePoint struct {
 
 func (x *RevenuePoint) Reset() {
 	*x = RevenuePoint{}
-	mi := &file_finance_proto_msgTypes[4]
+	mi := &file_finance_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -299,7 +529,7 @@ func (x *RevenuePoint) String() string {
 func (*RevenuePoint) ProtoMessage() {}
 
 func (x *RevenuePoint) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_proto_msgTypes[4]
+	mi := &file_finance_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -312,7 +542,7 @@ func (x *RevenuePoint) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RevenuePoint.ProtoReflect.Descriptor instead.
 func (*RevenuePoint) Descriptor() ([]byte, []int) {
-	return file_finance_proto_rawDescGZIP(), []int{4}
+	return file_finance_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *RevenuePoint) GetPeriod() string {
@@ -340,7 +570,7 @@ type GetGlobalRevenueResponse struct {
 
 func (x *GetGlobalRevenueResponse) Reset() {
 	*x = GetGlobalRevenueResponse{}
-	mi := &file_finance_proto_msgTypes[5]
+	mi := &file_finance_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -352,7 +582,7 @@ func (x *GetGlobalRevenueResponse) String() string {
 func (*GetGlobalRevenueResponse) ProtoMessage() {}
 
 func (x *GetGlobalRevenueResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_proto_msgTypes[5]
+	mi := &file_finance_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -365,7 +595,7 @@ func (x *GetGlobalRevenueResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetGlobalRevenueResponse.ProtoReflect.Descriptor instead.
 func (*GetGlobalRevenueResponse) Descriptor() ([]byte, []int) {
-	return file_finance_proto_rawDescGZIP(), []int{5}
+	return file_finance_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GetGlobalRevenueResponse) GetTotalCents() int64 {
@@ -399,7 +629,7 @@ type GetRegionalAnalyticsRequest struct {
 
 func (x *GetRegionalAnalyticsRequest) Reset() {
 	*x = GetRegionalAnalyticsRequest{}
-	mi := &file_finance_proto_msgTypes[6]
+	mi := &file_finance_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -411,7 +641,7 @@ func (x *GetRegionalAnalyticsRequest) String() string {
 func (*GetRegionalAnalyticsRequest) ProtoMessage() {}
 
 func (x *GetRegionalAnalyticsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_proto_msgTypes[6]
+	mi := &file_finance_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -424,7 +654,7 @@ func (x *GetRegionalAnalyticsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRegionalAnalyticsRequest.ProtoReflect.Descriptor instead.
 func (*GetRegionalAnalyticsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_proto_rawDescGZIP(), []int{6}
+	return file_finance_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *GetRegionalAnalyticsRequest) GetFromRfc3339() string {
@@ -452,7 +682,7 @@ type RegionTotal struct {
 
 func (x *RegionTotal) Reset() {
 	*x = RegionTotal{}
-	mi := &file_finance_proto_msgTypes[7]
+	mi := &file_finance_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -464,7 +694,7 @@ func (x *RegionTotal) String() string {
 func (*RegionTotal) ProtoMessage() {}
 
 func (x *RegionTotal) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_proto_msgTypes[7]
+	mi := &file_finance_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -477,7 +707,7 @@ func (x *RegionTotal) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RegionTotal.ProtoReflect.Descriptor instead.
 func (*RegionTotal) Descriptor() ([]byte, []int) {
-	return file_finance_proto_rawDescGZIP(), []int{7}
+	return file_finance_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *RegionTotal) GetRegion() string {
@@ -511,7 +741,7 @@ type GetRegionalAnalyticsResponse struct {
 
 func (x *GetRegionalAnalyticsResponse) Reset() {
 	*x = GetRegionalAnalyticsResponse{}
-	mi := &file_finance_proto_msgTypes[8]
+	mi := &file_finance_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -523,7 +753,7 @@ func (x *GetRegionalAnalyticsResponse) String() string {
 func (*GetRegionalAnalyticsResponse) ProtoMessage() {}
 
 func (x *GetRegionalAnalyticsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_proto_msgTypes[8]
+	mi := &file_finance_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -536,7 +766,7 @@ func (x *GetRegionalAnalyticsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetRegionalAnalyticsResponse.ProtoReflect.Descriptor instead.
 func (*GetRegionalAnalyticsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_proto_rawDescGZIP(), []int{8}
+	return file_finance_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GetRegionalAnalyticsResponse) GetRegions() []*RegionTotal {
@@ -555,13 +785,15 @@ func (x *GetRegionalAnalyticsResponse) GetCurrency() string {
 
 type GetCategoryInsightsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
+	FromRfc3339   string                 `protobuf:"bytes,1,opt,name=from_rfc3339,json=fromRfc3339,proto3" json:"from_rfc3339,omitempty"`
+	ToRfc3339     string                 `protobuf:"bytes,2,opt,name=to_rfc3339,json=toRfc3339,proto3" json:"to_rfc3339,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetCategoryInsightsRequest) Reset() {
 	*x = GetCategoryInsightsRequest{}
-	mi := &file_finance_proto_msgTypes[9]
+	mi := &file_finance_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -573,7 +805,7 @@ func (x *GetCategoryInsightsRequest) String() string {
 func (*GetCategoryInsightsRequest) ProtoMessage() {}
 
 func (x *GetCategoryInsightsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_proto_msgTypes[9]
+	mi := &file_finance_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -586,21 +818,39 @@ func (x *GetCategoryInsightsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCategoryInsightsRequest.ProtoReflect.Descriptor instead.
 func (*GetCategoryInsightsRequest) Descriptor() ([]byte, []int) {
-	return file_finance_proto_rawDescGZIP(), []int{9}
+	return file_finance_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *GetCategoryInsightsRequest) GetFromRfc3339() string {
+	if x != nil {
+		return x.FromRfc3339
+	}
+	return ""
+}
+
+func (x *GetCategoryInsightsRequest) GetToRfc3339() string {
+	if x != nil {
+		return x.ToRfc3339
+	}
+	return ""
 }
 
 type CategoryInsight struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Category      string                 `protobuf:"bytes,1,opt,name=category,proto3" json:"category,omitempty"`
-	AmountCents   int64                  `protobuf:"varint,2,opt,name=amount_cents,json=amountCents,proto3" json:"amount_cents,omitempty"`
-	Count         int32                  `protobuf:"varint,3,opt,name=count,proto3" json:"count,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Car package slug (empty if unknown)
+	PackageSlug string `protobuf:"bytes,1,opt,name=package_slug,json=packageSlug,proto3" json:"package_slug,omitempty"`
+	// Net platform revenue for trips in this package (rider debits, one amount per trip)
+	NetAmountCents  int64 `protobuf:"varint,2,opt,name=net_amount_cents,json=netAmountCents,proto3" json:"net_amount_cents,omitempty"`
+	TripCount       int32 `protobuf:"varint,3,opt,name=trip_count,json=tripCount,proto3" json:"trip_count,omitempty"`
+	DistinctRiders  int32 `protobuf:"varint,4,opt,name=distinct_riders,json=distinctRiders,proto3" json:"distinct_riders,omitempty"`
+	DistinctDrivers int32 `protobuf:"varint,5,opt,name=distinct_drivers,json=distinctDrivers,proto3" json:"distinct_drivers,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *CategoryInsight) Reset() {
 	*x = CategoryInsight{}
-	mi := &file_finance_proto_msgTypes[10]
+	mi := &file_finance_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -612,7 +862,7 @@ func (x *CategoryInsight) String() string {
 func (*CategoryInsight) ProtoMessage() {}
 
 func (x *CategoryInsight) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_proto_msgTypes[10]
+	mi := &file_finance_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -625,26 +875,40 @@ func (x *CategoryInsight) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CategoryInsight.ProtoReflect.Descriptor instead.
 func (*CategoryInsight) Descriptor() ([]byte, []int) {
-	return file_finance_proto_rawDescGZIP(), []int{10}
+	return file_finance_proto_rawDescGZIP(), []int{13}
 }
 
-func (x *CategoryInsight) GetCategory() string {
+func (x *CategoryInsight) GetPackageSlug() string {
 	if x != nil {
-		return x.Category
+		return x.PackageSlug
 	}
 	return ""
 }
 
-func (x *CategoryInsight) GetAmountCents() int64 {
+func (x *CategoryInsight) GetNetAmountCents() int64 {
 	if x != nil {
-		return x.AmountCents
+		return x.NetAmountCents
 	}
 	return 0
 }
 
-func (x *CategoryInsight) GetCount() int32 {
+func (x *CategoryInsight) GetTripCount() int32 {
 	if x != nil {
-		return x.Count
+		return x.TripCount
+	}
+	return 0
+}
+
+func (x *CategoryInsight) GetDistinctRiders() int32 {
+	if x != nil {
+		return x.DistinctRiders
+	}
+	return 0
+}
+
+func (x *CategoryInsight) GetDistinctDrivers() int32 {
+	if x != nil {
+		return x.DistinctDrivers
 	}
 	return 0
 }
@@ -659,7 +923,7 @@ type GetCategoryInsightsResponse struct {
 
 func (x *GetCategoryInsightsResponse) Reset() {
 	*x = GetCategoryInsightsResponse{}
-	mi := &file_finance_proto_msgTypes[11]
+	mi := &file_finance_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -671,7 +935,7 @@ func (x *GetCategoryInsightsResponse) String() string {
 func (*GetCategoryInsightsResponse) ProtoMessage() {}
 
 func (x *GetCategoryInsightsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_finance_proto_msgTypes[11]
+	mi := &file_finance_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -684,7 +948,7 @@ func (x *GetCategoryInsightsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCategoryInsightsResponse.ProtoReflect.Descriptor instead.
 func (*GetCategoryInsightsResponse) Descriptor() ([]byte, []int) {
-	return file_finance_proto_rawDescGZIP(), []int{11}
+	return file_finance_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *GetCategoryInsightsResponse) GetCategories() []*CategoryInsight {
@@ -701,11 +965,271 @@ func (x *GetCategoryInsightsResponse) GetCurrency() string {
 	return ""
 }
 
+type LedgerRow struct {
+	state            protoimpl.MessageState `protogen:"open.v1"`
+	Id               string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	UserId           string                 `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	UserEmail        string                 `protobuf:"bytes,3,opt,name=user_email,json=userEmail,proto3" json:"user_email,omitempty"`
+	AmountCents      int64                  `protobuf:"varint,4,opt,name=amount_cents,json=amountCents,proto3" json:"amount_cents,omitempty"`
+	Currency         string                 `protobuf:"bytes,5,opt,name=currency,proto3" json:"currency,omitempty"`
+	Type             string                 `protobuf:"bytes,6,opt,name=type,proto3" json:"type,omitempty"`
+	Region           string                 `protobuf:"bytes,7,opt,name=region,proto3" json:"region,omitempty"`
+	Status           string                 `protobuf:"bytes,8,opt,name=status,proto3" json:"status,omitempty"`
+	SourceTripId     string                 `protobuf:"bytes,9,opt,name=source_trip_id,json=sourceTripId,proto3" json:"source_trip_id,omitempty"`
+	PackageSlug      string                 `protobuf:"bytes,10,opt,name=package_slug,json=packageSlug,proto3" json:"package_slug,omitempty"`
+	CreatedAtRfc3339 string                 `protobuf:"bytes,11,opt,name=created_at_rfc3339,json=createdAtRfc3339,proto3" json:"created_at_rfc3339,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
+}
+
+func (x *LedgerRow) Reset() {
+	*x = LedgerRow{}
+	mi := &file_finance_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *LedgerRow) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*LedgerRow) ProtoMessage() {}
+
+func (x *LedgerRow) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use LedgerRow.ProtoReflect.Descriptor instead.
+func (*LedgerRow) Descriptor() ([]byte, []int) {
+	return file_finance_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *LedgerRow) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *LedgerRow) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *LedgerRow) GetUserEmail() string {
+	if x != nil {
+		return x.UserEmail
+	}
+	return ""
+}
+
+func (x *LedgerRow) GetAmountCents() int64 {
+	if x != nil {
+		return x.AmountCents
+	}
+	return 0
+}
+
+func (x *LedgerRow) GetCurrency() string {
+	if x != nil {
+		return x.Currency
+	}
+	return ""
+}
+
+func (x *LedgerRow) GetType() string {
+	if x != nil {
+		return x.Type
+	}
+	return ""
+}
+
+func (x *LedgerRow) GetRegion() string {
+	if x != nil {
+		return x.Region
+	}
+	return ""
+}
+
+func (x *LedgerRow) GetStatus() string {
+	if x != nil {
+		return x.Status
+	}
+	return ""
+}
+
+func (x *LedgerRow) GetSourceTripId() string {
+	if x != nil {
+		return x.SourceTripId
+	}
+	return ""
+}
+
+func (x *LedgerRow) GetPackageSlug() string {
+	if x != nil {
+		return x.PackageSlug
+	}
+	return ""
+}
+
+func (x *LedgerRow) GetCreatedAtRfc3339() string {
+	if x != nil {
+		return x.CreatedAtRfc3339
+	}
+	return ""
+}
+
+type ListLedgerRequest struct {
+	state               protoimpl.MessageState `protogen:"open.v1"`
+	Limit               int32                  `protobuf:"varint,1,opt,name=limit,proto3" json:"limit,omitempty"`
+	FilterUserId        string                 `protobuf:"bytes,2,opt,name=filter_user_id,json=filterUserId,proto3" json:"filter_user_id,omitempty"`
+	FilterTripId        string                 `protobuf:"bytes,3,opt,name=filter_trip_id,json=filterTripId,proto3" json:"filter_trip_id,omitempty"`
+	FilterEmailContains string                 `protobuf:"bytes,4,opt,name=filter_email_contains,json=filterEmailContains,proto3" json:"filter_email_contains,omitempty"`
+	FilterPackageSlug   string                 `protobuf:"bytes,5,opt,name=filter_package_slug,json=filterPackageSlug,proto3" json:"filter_package_slug,omitempty"`
+	FilterRiderUserId   string                 `protobuf:"bytes,6,opt,name=filter_rider_user_id,json=filterRiderUserId,proto3" json:"filter_rider_user_id,omitempty"`
+	FilterDriverUserId  string                 `protobuf:"bytes,7,opt,name=filter_driver_user_id,json=filterDriverUserId,proto3" json:"filter_driver_user_id,omitempty"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *ListLedgerRequest) Reset() {
+	*x = ListLedgerRequest{}
+	mi := &file_finance_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListLedgerRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListLedgerRequest) ProtoMessage() {}
+
+func (x *ListLedgerRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListLedgerRequest.ProtoReflect.Descriptor instead.
+func (*ListLedgerRequest) Descriptor() ([]byte, []int) {
+	return file_finance_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *ListLedgerRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *ListLedgerRequest) GetFilterUserId() string {
+	if x != nil {
+		return x.FilterUserId
+	}
+	return ""
+}
+
+func (x *ListLedgerRequest) GetFilterTripId() string {
+	if x != nil {
+		return x.FilterTripId
+	}
+	return ""
+}
+
+func (x *ListLedgerRequest) GetFilterEmailContains() string {
+	if x != nil {
+		return x.FilterEmailContains
+	}
+	return ""
+}
+
+func (x *ListLedgerRequest) GetFilterPackageSlug() string {
+	if x != nil {
+		return x.FilterPackageSlug
+	}
+	return ""
+}
+
+func (x *ListLedgerRequest) GetFilterRiderUserId() string {
+	if x != nil {
+		return x.FilterRiderUserId
+	}
+	return ""
+}
+
+func (x *ListLedgerRequest) GetFilterDriverUserId() string {
+	if x != nil {
+		return x.FilterDriverUserId
+	}
+	return ""
+}
+
+type ListLedgerResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Rows          []*LedgerRow           `protobuf:"bytes,1,rep,name=rows,proto3" json:"rows,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListLedgerResponse) Reset() {
+	*x = ListLedgerResponse{}
+	mi := &file_finance_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListLedgerResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListLedgerResponse) ProtoMessage() {}
+
+func (x *ListLedgerResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_finance_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListLedgerResponse.ProtoReflect.Descriptor instead.
+func (*ListLedgerResponse) Descriptor() ([]byte, []int) {
+	return file_finance_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *ListLedgerResponse) GetRows() []*LedgerRow {
+	if x != nil {
+		return x.Rows
+	}
+	return nil
+}
+
 var File_finance_proto protoreflect.FileDescriptor
 
 const file_finance_proto_rawDesc = "" +
 	"\n" +
-	"\rfinance.proto\x12\afinance\"\x8d\x02\n" +
+	"\rfinance.proto\x12\afinance\"\xb0\x02\n" +
 	"\vTransaction\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\auser_id\x18\x02 \x01(\tR\x06userId\x12!\n" +
@@ -715,16 +1239,36 @@ const file_finance_proto_rawDesc = "" +
 	"\x06region\x18\x06 \x01(\tR\x06region\x12\x16\n" +
 	"\x06status\x18\a \x01(\tR\x06status\x12$\n" +
 	"\x0esource_trip_id\x18\b \x01(\tR\fsourceTripId\x12,\n" +
-	"\x12created_at_rfc3339\x18\t \x01(\tR\x10createdAtRfc3339\"I\n" +
+	"\x12created_at_rfc3339\x18\t \x01(\tR\x10createdAtRfc3339\x12!\n" +
+	"\fpackage_slug\x18\n" +
+	" \x01(\tR\vpackageSlug\"I\n" +
 	"\x18GetMyTransactionsRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12\x14\n" +
 	"\x05limit\x18\x02 \x01(\x05R\x05limit\"U\n" +
 	"\x19GetMyTransactionsResponse\x128\n" +
-	"\ftransactions\x18\x01 \x03(\v2\x14.finance.TransactionR\ftransactions\"[\n" +
+	"\ftransactions\x18\x01 \x03(\v2\x14.finance.TransactionR\ftransactions\"\xca\x01\n" +
+	"\x1bGetCustomerDashboardRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\x12!\n" +
+	"\ffrom_rfc3339\x18\x02 \x01(\tR\vfromRfc3339\x12\x1d\n" +
+	"\n" +
+	"to_rfc3339\x18\x03 \x01(\tR\ttoRfc3339\x12-\n" +
+	"\x12series_granularity\x18\x04 \x01(\tR\x11seriesGranularity\x12!\n" +
+	"\frecent_limit\x18\x05 \x01(\x05R\vrecentLimit\"H\n" +
+	"\vAmountPoint\x12\x16\n" +
+	"\x06period\x18\x01 \x01(\tR\x06period\x12!\n" +
+	"\famount_cents\x18\x02 \x01(\x03R\vamountCents\"\xa0\x02\n" +
+	"\x1cGetCustomerDashboardResponse\x12,\n" +
+	"\x12total_income_cents\x18\x01 \x01(\x03R\x10totalIncomeCents\x12.\n" +
+	"\x13total_expense_cents\x18\x02 \x01(\x03R\x11totalExpenseCents\x12\x1b\n" +
+	"\tnet_cents\x18\x03 \x01(\x03R\bnetCents\x12\x1a\n" +
+	"\bcurrency\x18\x04 \x01(\tR\bcurrency\x12;\n" +
+	"\x0eearning_series\x18\x05 \x03(\v2\x14.finance.AmountPointR\rearningSeries\x12,\n" +
+	"\x06recent\x18\x06 \x03(\v2\x14.finance.TransactionR\x06recent\"\x88\x01\n" +
 	"\x17GetGlobalRevenueRequest\x12!\n" +
 	"\ffrom_rfc3339\x18\x01 \x01(\tR\vfromRfc3339\x12\x1d\n" +
 	"\n" +
-	"to_rfc3339\x18\x02 \x01(\tR\ttoRfc3339\"I\n" +
+	"to_rfc3339\x18\x02 \x01(\tR\ttoRfc3339\x12+\n" +
+	"\x11trend_granularity\x18\x03 \x01(\tR\x10trendGranularity\"I\n" +
 	"\fRevenuePoint\x12\x16\n" +
 	"\x06period\x18\x01 \x01(\tR\x06period\x12!\n" +
 	"\famount_cents\x18\x02 \x01(\x03R\vamountCents\"\x84\x01\n" +
@@ -743,22 +1287,55 @@ const file_finance_proto_rawDesc = "" +
 	"\x11transaction_count\x18\x03 \x01(\x05R\x10transactionCount\"j\n" +
 	"\x1cGetRegionalAnalyticsResponse\x12.\n" +
 	"\aregions\x18\x01 \x03(\v2\x14.finance.RegionTotalR\aregions\x12\x1a\n" +
-	"\bcurrency\x18\x02 \x01(\tR\bcurrency\"\x1c\n" +
-	"\x1aGetCategoryInsightsRequest\"f\n" +
-	"\x0fCategoryInsight\x12\x1a\n" +
-	"\bcategory\x18\x01 \x01(\tR\bcategory\x12!\n" +
-	"\famount_cents\x18\x02 \x01(\x03R\vamountCents\x12\x14\n" +
-	"\x05count\x18\x03 \x01(\x05R\x05count\"s\n" +
+	"\bcurrency\x18\x02 \x01(\tR\bcurrency\"^\n" +
+	"\x1aGetCategoryInsightsRequest\x12!\n" +
+	"\ffrom_rfc3339\x18\x01 \x01(\tR\vfromRfc3339\x12\x1d\n" +
+	"\n" +
+	"to_rfc3339\x18\x02 \x01(\tR\ttoRfc3339\"\xd1\x01\n" +
+	"\x0fCategoryInsight\x12!\n" +
+	"\fpackage_slug\x18\x01 \x01(\tR\vpackageSlug\x12(\n" +
+	"\x10net_amount_cents\x18\x02 \x01(\x03R\x0enetAmountCents\x12\x1d\n" +
+	"\n" +
+	"trip_count\x18\x03 \x01(\x05R\ttripCount\x12'\n" +
+	"\x0fdistinct_riders\x18\x04 \x01(\x05R\x0edistinctRiders\x12)\n" +
+	"\x10distinct_drivers\x18\x05 \x01(\x05R\x0fdistinctDrivers\"s\n" +
 	"\x1bGetCategoryInsightsResponse\x128\n" +
 	"\n" +
 	"categories\x18\x01 \x03(\v2\x18.finance.CategoryInsightR\n" +
 	"categories\x12\x1a\n" +
-	"\bcurrency\x18\x02 \x01(\tR\bcurrency2\x8c\x03\n" +
+	"\bcurrency\x18\x02 \x01(\tR\bcurrency\"\xcd\x02\n" +
+	"\tLedgerRow\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\tR\x06userId\x12\x1d\n" +
+	"\n" +
+	"user_email\x18\x03 \x01(\tR\tuserEmail\x12!\n" +
+	"\famount_cents\x18\x04 \x01(\x03R\vamountCents\x12\x1a\n" +
+	"\bcurrency\x18\x05 \x01(\tR\bcurrency\x12\x12\n" +
+	"\x04type\x18\x06 \x01(\tR\x04type\x12\x16\n" +
+	"\x06region\x18\a \x01(\tR\x06region\x12\x16\n" +
+	"\x06status\x18\b \x01(\tR\x06status\x12$\n" +
+	"\x0esource_trip_id\x18\t \x01(\tR\fsourceTripId\x12!\n" +
+	"\fpackage_slug\x18\n" +
+	" \x01(\tR\vpackageSlug\x12,\n" +
+	"\x12created_at_rfc3339\x18\v \x01(\tR\x10createdAtRfc3339\"\xbd\x02\n" +
+	"\x11ListLedgerRequest\x12\x14\n" +
+	"\x05limit\x18\x01 \x01(\x05R\x05limit\x12$\n" +
+	"\x0efilter_user_id\x18\x02 \x01(\tR\ffilterUserId\x12$\n" +
+	"\x0efilter_trip_id\x18\x03 \x01(\tR\ffilterTripId\x122\n" +
+	"\x15filter_email_contains\x18\x04 \x01(\tR\x13filterEmailContains\x12.\n" +
+	"\x13filter_package_slug\x18\x05 \x01(\tR\x11filterPackageSlug\x12/\n" +
+	"\x14filter_rider_user_id\x18\x06 \x01(\tR\x11filterRiderUserId\x121\n" +
+	"\x15filter_driver_user_id\x18\a \x01(\tR\x12filterDriverUserId\"<\n" +
+	"\x12ListLedgerResponse\x12&\n" +
+	"\x04rows\x18\x01 \x03(\v2\x12.finance.LedgerRowR\x04rows2\xb8\x04\n" +
 	"\x0eFinanceService\x12Z\n" +
-	"\x11GetMyTransactions\x12!.finance.GetMyTransactionsRequest\x1a\".finance.GetMyTransactionsResponse\x12W\n" +
+	"\x11GetMyTransactions\x12!.finance.GetMyTransactionsRequest\x1a\".finance.GetMyTransactionsResponse\x12c\n" +
+	"\x14GetCustomerDashboard\x12$.finance.GetCustomerDashboardRequest\x1a%.finance.GetCustomerDashboardResponse\x12W\n" +
 	"\x10GetGlobalRevenue\x12 .finance.GetGlobalRevenueRequest\x1a!.finance.GetGlobalRevenueResponse\x12c\n" +
 	"\x14GetRegionalAnalytics\x12$.finance.GetRegionalAnalyticsRequest\x1a%.finance.GetRegionalAnalyticsResponse\x12`\n" +
-	"\x13GetCategoryInsights\x12#.finance.GetCategoryInsightsRequest\x1a$.finance.GetCategoryInsightsResponseB\x1eZ\x1cshared/proto/finance;financeb\x06proto3"
+	"\x13GetCategoryInsights\x12#.finance.GetCategoryInsightsRequest\x1a$.finance.GetCategoryInsightsResponse\x12E\n" +
+	"\n" +
+	"ListLedger\x12\x1a.finance.ListLedgerRequest\x1a\x1b.finance.ListLedgerResponseB\x1eZ\x1cshared/proto/finance;financeb\x06proto3"
 
 var (
 	file_finance_proto_rawDescOnce sync.Once
@@ -772,39 +1349,52 @@ func file_finance_proto_rawDescGZIP() []byte {
 	return file_finance_proto_rawDescData
 }
 
-var file_finance_proto_msgTypes = make([]protoimpl.MessageInfo, 12)
+var file_finance_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_finance_proto_goTypes = []any{
 	(*Transaction)(nil),                  // 0: finance.Transaction
 	(*GetMyTransactionsRequest)(nil),     // 1: finance.GetMyTransactionsRequest
 	(*GetMyTransactionsResponse)(nil),    // 2: finance.GetMyTransactionsResponse
-	(*GetGlobalRevenueRequest)(nil),      // 3: finance.GetGlobalRevenueRequest
-	(*RevenuePoint)(nil),                 // 4: finance.RevenuePoint
-	(*GetGlobalRevenueResponse)(nil),     // 5: finance.GetGlobalRevenueResponse
-	(*GetRegionalAnalyticsRequest)(nil),  // 6: finance.GetRegionalAnalyticsRequest
-	(*RegionTotal)(nil),                  // 7: finance.RegionTotal
-	(*GetRegionalAnalyticsResponse)(nil), // 8: finance.GetRegionalAnalyticsResponse
-	(*GetCategoryInsightsRequest)(nil),   // 9: finance.GetCategoryInsightsRequest
-	(*CategoryInsight)(nil),              // 10: finance.CategoryInsight
-	(*GetCategoryInsightsResponse)(nil),  // 11: finance.GetCategoryInsightsResponse
+	(*GetCustomerDashboardRequest)(nil),  // 3: finance.GetCustomerDashboardRequest
+	(*AmountPoint)(nil),                  // 4: finance.AmountPoint
+	(*GetCustomerDashboardResponse)(nil), // 5: finance.GetCustomerDashboardResponse
+	(*GetGlobalRevenueRequest)(nil),      // 6: finance.GetGlobalRevenueRequest
+	(*RevenuePoint)(nil),                 // 7: finance.RevenuePoint
+	(*GetGlobalRevenueResponse)(nil),     // 8: finance.GetGlobalRevenueResponse
+	(*GetRegionalAnalyticsRequest)(nil),  // 9: finance.GetRegionalAnalyticsRequest
+	(*RegionTotal)(nil),                  // 10: finance.RegionTotal
+	(*GetRegionalAnalyticsResponse)(nil), // 11: finance.GetRegionalAnalyticsResponse
+	(*GetCategoryInsightsRequest)(nil),   // 12: finance.GetCategoryInsightsRequest
+	(*CategoryInsight)(nil),              // 13: finance.CategoryInsight
+	(*GetCategoryInsightsResponse)(nil),  // 14: finance.GetCategoryInsightsResponse
+	(*LedgerRow)(nil),                    // 15: finance.LedgerRow
+	(*ListLedgerRequest)(nil),            // 16: finance.ListLedgerRequest
+	(*ListLedgerResponse)(nil),           // 17: finance.ListLedgerResponse
 }
 var file_finance_proto_depIdxs = []int32{
 	0,  // 0: finance.GetMyTransactionsResponse.transactions:type_name -> finance.Transaction
-	4,  // 1: finance.GetGlobalRevenueResponse.trend:type_name -> finance.RevenuePoint
-	7,  // 2: finance.GetRegionalAnalyticsResponse.regions:type_name -> finance.RegionTotal
-	10, // 3: finance.GetCategoryInsightsResponse.categories:type_name -> finance.CategoryInsight
-	1,  // 4: finance.FinanceService.GetMyTransactions:input_type -> finance.GetMyTransactionsRequest
-	3,  // 5: finance.FinanceService.GetGlobalRevenue:input_type -> finance.GetGlobalRevenueRequest
-	6,  // 6: finance.FinanceService.GetRegionalAnalytics:input_type -> finance.GetRegionalAnalyticsRequest
-	9,  // 7: finance.FinanceService.GetCategoryInsights:input_type -> finance.GetCategoryInsightsRequest
-	2,  // 8: finance.FinanceService.GetMyTransactions:output_type -> finance.GetMyTransactionsResponse
-	5,  // 9: finance.FinanceService.GetGlobalRevenue:output_type -> finance.GetGlobalRevenueResponse
-	8,  // 10: finance.FinanceService.GetRegionalAnalytics:output_type -> finance.GetRegionalAnalyticsResponse
-	11, // 11: finance.FinanceService.GetCategoryInsights:output_type -> finance.GetCategoryInsightsResponse
-	8,  // [8:12] is the sub-list for method output_type
-	4,  // [4:8] is the sub-list for method input_type
-	4,  // [4:4] is the sub-list for extension type_name
-	4,  // [4:4] is the sub-list for extension extendee
-	0,  // [0:4] is the sub-list for field type_name
+	4,  // 1: finance.GetCustomerDashboardResponse.earning_series:type_name -> finance.AmountPoint
+	0,  // 2: finance.GetCustomerDashboardResponse.recent:type_name -> finance.Transaction
+	7,  // 3: finance.GetGlobalRevenueResponse.trend:type_name -> finance.RevenuePoint
+	10, // 4: finance.GetRegionalAnalyticsResponse.regions:type_name -> finance.RegionTotal
+	13, // 5: finance.GetCategoryInsightsResponse.categories:type_name -> finance.CategoryInsight
+	15, // 6: finance.ListLedgerResponse.rows:type_name -> finance.LedgerRow
+	1,  // 7: finance.FinanceService.GetMyTransactions:input_type -> finance.GetMyTransactionsRequest
+	3,  // 8: finance.FinanceService.GetCustomerDashboard:input_type -> finance.GetCustomerDashboardRequest
+	6,  // 9: finance.FinanceService.GetGlobalRevenue:input_type -> finance.GetGlobalRevenueRequest
+	9,  // 10: finance.FinanceService.GetRegionalAnalytics:input_type -> finance.GetRegionalAnalyticsRequest
+	12, // 11: finance.FinanceService.GetCategoryInsights:input_type -> finance.GetCategoryInsightsRequest
+	16, // 12: finance.FinanceService.ListLedger:input_type -> finance.ListLedgerRequest
+	2,  // 13: finance.FinanceService.GetMyTransactions:output_type -> finance.GetMyTransactionsResponse
+	5,  // 14: finance.FinanceService.GetCustomerDashboard:output_type -> finance.GetCustomerDashboardResponse
+	8,  // 15: finance.FinanceService.GetGlobalRevenue:output_type -> finance.GetGlobalRevenueResponse
+	11, // 16: finance.FinanceService.GetRegionalAnalytics:output_type -> finance.GetRegionalAnalyticsResponse
+	14, // 17: finance.FinanceService.GetCategoryInsights:output_type -> finance.GetCategoryInsightsResponse
+	17, // 18: finance.FinanceService.ListLedger:output_type -> finance.ListLedgerResponse
+	13, // [13:19] is the sub-list for method output_type
+	7,  // [7:13] is the sub-list for method input_type
+	7,  // [7:7] is the sub-list for extension type_name
+	7,  // [7:7] is the sub-list for extension extendee
+	0,  // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_finance_proto_init() }
@@ -818,7 +1408,7 @@ func file_finance_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_finance_proto_rawDesc), len(file_finance_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   12,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

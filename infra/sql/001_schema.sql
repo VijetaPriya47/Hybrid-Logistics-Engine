@@ -58,3 +58,17 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 );
 
 CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit_logs (ts DESC);
+
+-- RBAC extensions (idempotent for existing deployments)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS can_create_admins BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS can_delete_data BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS created_by_admin_id UUID REFERENCES users (id);
+
+ALTER TABLE transactions ADD COLUMN IF NOT EXISTS package_slug TEXT;
+
+DROP INDEX IF EXISTS idx_transactions_source_trip;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_trip_user ON transactions (source_trip_id, user_id) WHERE source_trip_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_transactions_type ON transactions (type);
+CREATE INDEX IF NOT EXISTS idx_transactions_package ON transactions (package_slug) WHERE package_slug IS NOT NULL;

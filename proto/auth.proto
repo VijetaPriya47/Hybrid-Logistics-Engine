@@ -9,6 +9,8 @@ service UserAuthService {
   rpc GoogleVerify(GoogleVerifyRequest) returns (GoogleVerifyResponse);
   rpc RegisterBusiness(RegisterBusinessRequest) returns (RegisterBusinessResponse);
   rpc RegisterAdmin(RegisterAdminRequest) returns (RegisterAdminResponse);
+  rpc ListBusinessUsers(ListBusinessUsersRequest) returns (ListBusinessUsersResponse);
+  rpc SetBusinessUserActive(SetBusinessUserActiveRequest) returns (SetBusinessUserActiveResponse);
   rpc RequestPasswordReset(RequestPasswordResetRequest) returns (RequestPasswordResetResponse);
   rpc ResetPassword(ResetPasswordRequest) returns (ResetPasswordResponse);
   rpc ListAuditLogs(ListAuditLogsRequest) returns (ListAuditLogsResponse);
@@ -24,6 +26,9 @@ message UserSummary {
   string id = 1;
   string email = 2;
   string role = 3;
+  bool is_active = 4;
+  bool can_create_admins = 5;
+  bool can_delete_data = 6;
 }
 
 message LoginLocalResponse {
@@ -54,9 +59,37 @@ message RegisterAdminRequest {
   string admin_user_id = 1;
   string email = 2;
   string password = 3;
+  bool can_create_admins = 4;
+  bool can_delete_data = 5;
 }
 
 message RegisterAdminResponse {
+  UserSummary user = 1;
+}
+
+message ListBusinessUsersRequest {
+  string admin_user_id = 1;
+}
+
+message BusinessUserRow {
+  string id = 1;
+  string email = 2;
+  bool is_active = 3;
+  string created_by_admin_email = 4;
+  string created_at_rfc3339 = 5;
+}
+
+message ListBusinessUsersResponse {
+  repeated BusinessUserRow users = 1;
+}
+
+message SetBusinessUserActiveRequest {
+  string admin_user_id = 1;
+  string business_user_id = 2;
+  bool is_active = 3;
+}
+
+message SetBusinessUserActiveResponse {
   UserSummary user = 1;
 }
 
