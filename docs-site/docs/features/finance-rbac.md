@@ -82,7 +82,7 @@ Next.js routes:
 
 - `/login` — Google (riders/drivers) and email/password (admin/business); forgot-password request; requires `NEXT_PUBLIC_GOOGLE_CLIENT_ID` for Google.
 - `/finance/me` — customer dashboard (summary, earnings chart, recent ledger colors) plus ride history table.
-- `/dashboard` — business/admin charts and tables for revenue, regions, packages.
+- `/dashboard` — business/admin charts and tables for revenue, regions, packages. For UI demos without backend data, set `NEXT_PUBLIC_DASHBOARD_MOCK=true` on the web app (mock fills only those finance widgets; admin ledger and APIs stay live).
 - `/admin` — business overview, audit log table, business users + active toggle, transaction filters, provisioning forms (admin creation requires JWT `can_create_admins`).
 - `/reset-password` — optional `?token=` query or paste token.
 

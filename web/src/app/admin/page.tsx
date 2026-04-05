@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import { API_URL } from "../../constants";
+import { API_URL, DASHBOARD_MOCK } from "../../constants";
 import { apiFetch } from "../../lib/api";
+import { getMockFinanceDashboard } from "../../lib/dashboardMockData";
 import { useSession } from "../../hooks/useSession";
 
 type AuditEntry = {
@@ -123,12 +124,9 @@ export default function AdminPage() {
 
   const loadData = useCallback(async () => {
     if (!session || session.user.role !== "admin") return;
-    const [logRes, bizRes, r1, r2, r3] = await Promise.all([
+    const [logRes, bizRes] = await Promise.all([
       apiFetch("/api/admin/system-logs?limit=100"),
       apiFetch("/api/admin/users/business"),
-      apiFetch("/api/finance/dashboard/revenue?trend_granularity=month"),
-      apiFetch("/api/finance/dashboard/regions"),
-      apiFetch("/api/finance/dashboard/categories"),
     ]);
     const logBody = await logRes.json();
     if (!logRes.ok) setLogError(logBody?.error?.message || "Failed to load logs");
@@ -140,16 +138,29 @@ export default function AdminPage() {
       setBizUsers(Array.isArray(u) ? u : []);
     }
 
-    const b1 = await r1.json();
-    const b2 = await r2.json();
-    const b3 = await r3.json();
-    if (!r1.ok || !r2.ok || !r3.ok) {
-      setDashErr(b1?.error?.message || b2?.error?.message || b3?.error?.message || "Dashboard load failed");
-    } else {
+    if (DASHBOARD_MOCK) {
+      const { revenue, regions, categories } = getMockFinanceDashboard("month");
       setDashErr("");
-      setRevenue(b1.data);
-      setRegions(b2.data);
-      setCategories(b3.data);
+      setRevenue(revenue);
+      setRegions(regions);
+      setCategories(categories);
+    } else {
+      const [r1, r2, r3] = await Promise.all([
+        apiFetch("/api/finance/dashboard/revenue?trend_granularity=month"),
+        apiFetch("/api/finance/dashboard/regions"),
+        apiFetch("/api/finance/dashboard/categories"),
+      ]);
+      const b1 = await r1.json();
+      const b2 = await r2.json();
+      const b3 = await r3.json();
+      if (!r1.ok || !r2.ok || !r3.ok) {
+        setDashErr(b1?.error?.message || b2?.error?.message || b3?.error?.message || "Dashboard load failed");
+      } else {
+        setDashErr("");
+        setRevenue(b1.data);
+        setRegions(b2.data);
+        setCategories(b3.data);
+      }
     }
   }, [session]);
 
@@ -317,6 +328,11 @@ export default function AdminPage() {
 
         <section className="space-y-3">
           <h2 className="font-medium text-slate-800">Business overview (same data as dashboard)</h2>
+          {DASHBOARD_MOCK && (
+            <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              Finance overview below uses mock data. Unset <code className="font-mono">NEXT_PUBLIC_DASHBOARD_MOCK</code> for live metrics.
+            </p>
+          )}
           {dashErr && <p className="text-red-600 text-sm">{dashErr}</p>}
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="bg-white rounded-xl border border-slate-200 p-4">

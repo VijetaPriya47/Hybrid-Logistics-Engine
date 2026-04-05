@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button } from "../../components/ui/button";
+import { DASHBOARD_MOCK } from "../../constants";
 import { apiFetch } from "../../lib/api";
+import { getMockFinanceDashboard } from "../../lib/dashboardMockData";
 import { useSession } from "../../hooks/useSession";
 
 type RevenuePoint = { period?: string; amount_cents?: number };
@@ -37,6 +39,14 @@ export default function DashboardPage() {
     if (session.user.role !== "business" && session.user.role !== "admin") return;
 
     (async () => {
+      if (DASHBOARD_MOCK) {
+        const { revenue, regions, categories } = getMockFinanceDashboard(trendGranularity);
+        setRevenue(revenue);
+        setRegions(regions);
+        setCategories(categories);
+        setError("");
+        return;
+      }
       try {
         const q = `trend_granularity=${trendGranularity}`;
         const [r1, r2, r3] = await Promise.all([
@@ -96,7 +106,13 @@ export default function DashboardPage() {
           <div>
             <h1 className="text-2xl font-semibold text-slate-900">Finance dashboard</h1>
             <p className="text-sm text-slate-500">{session.user.email} · {session.user.role}</p>
-            <p className="text-xs text-slate-400 mt-1">Revenue counts rider payments once per trip (no double-count).</p>
+            <p className="text-xs text-slate-400 mt-1">
+              {DASHBOARD_MOCK ? (
+                <span className="text-amber-700">Mock data (set NEXT_PUBLIC_DASHBOARD_MOCK=false for live API).</span>
+              ) : (
+                "Revenue counts rider payments once per trip (no double-count)."
+              )}
+            </p>
           </div>
           <div className="flex gap-2 flex-wrap">
             {session.user.role === "admin" && (

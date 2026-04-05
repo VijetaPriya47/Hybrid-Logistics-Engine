@@ -35,3 +35,8 @@ const getWsUrl = () => {
 };
 
 export const WEBSOCKET_URL = getWsUrl();
+
+/** When `true`, `/dashboard` and admin finance overview use local sample data instead of calling the gateway. */
+export const DASHBOARD_MOCK =
+  typeof process.env.NEXT_PUBLIC_DASHBOARD_MOCK === "string" &&
+  process.env.NEXT_PUBLIC_DASHBOARD_MOCK.toLowerCase() === "true";
