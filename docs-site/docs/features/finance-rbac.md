@@ -90,7 +90,7 @@ Next.js routes:
 
 - `/login` — Google (riders/drivers) and email/password (admin/business); forgot-password request; requires `NEXT_PUBLIC_GOOGLE_CLIENT_ID` for Google.
 - `/finance/me` — customer dashboard (summary, earnings chart, recent ledger colors) plus **paid-only** ride history. If the ledger response is empty while history has rows, totals and charts can still use **ride history** fares until you fix the consumer/webhook path (driver rows = income, rider rows = expenses).
-- `/dashboard` — business/admin charts and tables for revenue, regions, packages. **Sample data (Next.js build-time env on the web app):** `NEXT_PUBLIC_DASHBOARD_MOCK=true` always uses mock charts (skips finance API). `NEXT_PUBLIC_DASHBOARD_FALLBACK_MOCK=true` calls the live API and, if revenue/regions/categories are all empty (typical before Stripe posts to the ledger), fills the same mock charts. Values `1` / `yes` / `on` also count as true. Redeploy the web service after changing these (they are inlined at build).
+- `/dashboard` — business/admin charts and tables for revenue, regions, packages. For UI demos without backend data, set `NEXT_PUBLIC_DASHBOARD_MOCK=true` on the web app (mock fills only those finance widgets; admin ledger and APIs stay live).
 - `/admin` — business overview, audit log table, business users + active toggle, transaction filters, provisioning forms (admin creation requires JWT `can_create_admins`).
 - `/reset-password` — optional `?token=` query or paste token.
 
