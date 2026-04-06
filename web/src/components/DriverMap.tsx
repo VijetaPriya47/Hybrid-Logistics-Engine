@@ -4,7 +4,7 @@ import { useDriverStreamConnection } from "../hooks/useDriverStreamConnection"
 import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet'
 import L from 'leaflet';
 import { MapClickHandler } from './MapClickHandler';
-import { CarPackageSlug, Coordinate } from "../types";
+import { CarPackageSlug, Coordinate, type Trip } from "../types";
 import { DriverTripOverview } from "./DriverTripOverview";
 import * as Geohash from 'ngeohash';
 import { RoutingControl } from "./RoutingControl";
@@ -68,6 +68,8 @@ export const DriverMap = ({ packageSlug, userId }: { packageSlug: CarPackageSlug
     acceptPendingRequest,
     declinePendingRequest,
     triedDriverIdsMap,
+    paidTripIds,
+    clearPaidTripMarkers,
   } = useDriverStreamConnection({
     location: riderLocation,
     geohash: driverGeohash,
@@ -75,7 +77,44 @@ export const DriverMap = ({ packageSlug, userId }: { packageSlug: CarPackageSlug
     packageSlug,
   })
 
+  const isCarpool = packageSlug === CarPackageSlug.CARPOOL;
+
   const [isGPSTracking, setIsGPSTracking] = useState(true);
+  const lastActiveTripRef = useRef<Trip | null>(null);
+  const prevActiveTripIdsRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    if (activeTrip) lastActiveTripRef.current = activeTrip;
+  }, [activeTrip]);
+
+  /** After all active legs finish paying: carpool → waiting; single non-carpool → completed summary. */
+  useEffect(() => {
+    const ids = driver?.activeTripIds ?? [];
+    const prev = prevActiveTripIdsRef.current;
+    const same = prev.length === ids.length && prev.every((x, i) => x === ids[i]);
+    if (same) return;
+    prevActiveTripIdsRef.current = ids;
+
+    if (ids.length === 0 && prev.length > 0) {
+      if (isCarpool || prev.length > 1) {
+        setCompletedTrip(null);
+        setTripStatus(null);
+        clearPaidTripMarkers();
+      } else {
+        const t = lastActiveTripRef.current;
+        if (t && prev[0] === t.id) {
+          const seatsMultiplier = t.selectedFare?.requestedSeats ?? 1;
+          const totalAmount = (((t.selectedFare?.totalPriceInCents ?? 0) * seatsMultiplier) / 100).toFixed(2);
+          setCompletedTrip({
+            tripId: t.id,
+            riderId: t.userID,
+            amount: totalAmount,
+          });
+          setTripStatus(TripEvents.Completed);
+        }
+      }
+    }
+  }, [driver?.activeTripIds, isCarpool, clearPaidTripMarkers, setTripStatus]);
 
   // GPS Tracking logic
   useMemo(() => {
@@ -183,7 +222,6 @@ export const DriverMap = ({ packageSlug, userId }: { packageSlug: CarPackageSlug
 
   // Get active trip details for carpool rendering
   const activeTripIds = useMemo(() => driver?.activeTripIds || [], [driver]);
-  const isCarpool = packageSlug === CarPackageSlug.CARPOOL;
 
   useEffect(() => {
     if (activeTrip || activeTripIds.length === 0) return;
@@ -368,6 +406,8 @@ export const DriverMap = ({ packageSlug, userId }: { packageSlug: CarPackageSlug
             pendingCarpoolRequests={pendingCarpoolRequests}
             availableSeats={driver?.availableSeats}
             activeTrip={activeTrip}
+            activeTripIds={driver?.activeTripIds}
+            paidTripIds={paidTripIds}
             completedTrip={completedTrip}
             onAcceptPending={acceptPendingRequest}
             onDeclinePending={declinePendingRequest}

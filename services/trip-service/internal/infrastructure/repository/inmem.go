@@ -34,9 +34,10 @@ func (r *inmemRepository) UpdateTrip(ctx context.Context, tripID string, status 
 		return fmt.Errorf("trip not found with ID: %s", tripID)
 	}
 
-	trip.Status = status
-
 	if driver != nil {
+		if trip.Status != "pending" {
+			return fmt.Errorf("trip not found: %s", tripID)
+		}
 		trip.Driver = &domain.TripDriver{
 			ID:             driver.Id,
 			Name:           driver.Name,
@@ -44,6 +45,7 @@ func (r *inmemRepository) UpdateTrip(ctx context.Context, tripID string, status 
 			ProfilePicture: driver.ProfilePicture,
 		}
 	}
+	trip.Status = status
 	return nil
 }
 
@@ -102,6 +104,9 @@ func (r *inmemRepository) ListTripsForUser(ctx context.Context, userID string, l
 	}
 	var matched []*domain.TripModel
 	for _, t := range r.trips {
+		if t.Status != "payed" {
+			continue
+		}
 		if t.UserID == userID || (t.Driver != nil && t.Driver.ID == userID) {
 			matched = append(matched, t)
 		}

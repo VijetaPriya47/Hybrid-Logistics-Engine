@@ -113,3 +113,17 @@ export function getMockFinanceDashboard(trendGranularity: "day" | "month" | "yea
     categories: { categories: MOCK_CATEGORIES, currency },
   };
 }
+
+/** True when gateway returned 200 but there is nothing in the ledger yet (typical before Stripe webhooks). */
+export function isLiveFinanceDashboardEmpty(
+  revenue: { total_cents?: number; trend?: unknown[] } | null | undefined,
+  regions: { regions?: unknown[] } | null | undefined,
+  categories: { categories?: unknown[] } | null | undefined,
+): boolean {
+  return (
+    (revenue?.trend?.length ?? 0) === 0 &&
+    (revenue?.total_cents ?? 0) === 0 &&
+    (regions?.regions?.length ?? 0) === 0 &&
+    (categories?.categories?.length ?? 0) === 0
+  );
+}

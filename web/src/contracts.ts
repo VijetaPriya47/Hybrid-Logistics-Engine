@@ -23,17 +23,33 @@ export enum TripEvents {
   DriverTripDecline = "driver.cmd.trip_decline",
   DriverRegister = "driver.cmd.register",
   PaymentSessionCreated = "payment.event.session_created",
+  /** Stripe checkout completed; gateway pushes this on rider + driver WebSockets (same as AMQP routing key). */
+  PaymentSuccess = "payment.event.success",
 }
 
 // Messages sent from the server to the client via the websocket
 export type ServerWsMessage =
   | PaymentSessionCreatedRequest
+  | PaymentSuccessRequest
   | DriverAssignedRequest
   | DriverLocationRequest
   | DriverTripRequest
   | DriverRegisterRequest
   | TripCreatedRequest
   | NoDriversFoundRequest;
+
+export interface PaymentEventSuccessData {
+  tripID?: string;
+  userID?: string;
+  driverID?: string;
+  amountCents?: number;
+  currency?: string;
+}
+
+interface PaymentSuccessRequest {
+  type: TripEvents.PaymentSuccess;
+  data: PaymentEventSuccessData;
+}
 
 // Messages sent from the client to the server via the websocket
 export type ClientWsMessage = DriverResponseToTripResponse

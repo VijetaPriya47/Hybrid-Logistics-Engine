@@ -34,8 +34,8 @@ export const RiderTripOverview = ({
   const [timeLeft, setTimeLeft] = useState(120);
   const [timerEnded, setTimerEnded] = useState(false);
   const showDriverAssignedCard =
-    status === TripEvents.DriverAssigned ||
-    status === TripEvents.PaymentSessionCreated;
+    status !== TripEvents.Completed &&
+    (status === TripEvents.DriverAssigned || status === TripEvents.PaymentSessionCreated);
 
   useEffect(() => {
     if (status === TripEvents.Created) {
@@ -81,6 +81,19 @@ export const RiderTripOverview = ({
             Cancel Request
           </Button>
         </div>
+      </TripOverviewCard>
+    )
+  }
+
+  if (status === TripEvents.Completed) {
+    return (
+      <TripOverviewCard
+        title="Payment received"
+        description="Your trip is confirmed. Start a new ride when you are ready."
+      >
+        <Button variant="outline" className="w-full" onClick={onCancel}>
+          Book another trip
+        </Button>
       </TripOverviewCard>
     )
   }
@@ -145,19 +158,6 @@ export const RiderTripOverview = ({
         </div>
         <Button variant="destructive" className="w-full mt-4" onClick={onCancel}>
           Cancel current trip
-        </Button>
-      </TripOverviewCard>
-    )
-  }
-
-  if (status === TripEvents.Completed) {
-    return (
-      <TripOverviewCard
-        title="Trip completed!"
-        description="Your trip is completed, thank you for using our service!"
-      >
-        <Button variant="outline" className="w-full" onClick={onCancel}>
-          Go back
         </Button>
       </TripOverviewCard>
     )

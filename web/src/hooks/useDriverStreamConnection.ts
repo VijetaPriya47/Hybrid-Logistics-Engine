@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { WEBSOCKET_URL } from "../constants";
 import { Trip, Driver, CarPackageSlug } from '../types';
 import { ServerWsMessage, TripEvents, isValidWsMessage, isValidTripEvent, ClientWsMessage, BackendEndpoints } from '../contracts';
+import { apiFetch } from '../lib/api';
 
 interface useDriverConnectionProps {
   location: {
@@ -24,6 +25,7 @@ export const useDriverStreamConnection = ({
   const [pendingCarpoolRequests, setPendingCarpoolRequests] = useState<Trip[]>([]);
   const [triedDriverIdsMap, setTriedDriverIdsMap] = useState<Record<string, string[]>>({});
   const [tripStatus, setTripStatus] = useState<TripEvents | null>(null);
+  const [paidTripIds, setPaidTripIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [driver, setDriver] = useState<Driver | null>(null);
@@ -32,6 +34,61 @@ export const useDriverStreamConnection = ({
   React.useEffect(() => { activeTripRef.current = activeTrip; }, [activeTrip]);
   const driverRef = React.useRef<Driver | null>(null);
   React.useEffect(() => { driverRef.current = driver; }, [driver]);
+
+  const clearPaidTripMarkers = useCallback(() => setPaidTripIds([]), []);
+
+  const restoreSeatsAfterTrip = useCallback((trip: Trip) => {
+    setDriver((prev: Driver | null) => {
+      if (!prev) return prev;
+      const ids = prev.activeTripIds ?? [];
+      if (!ids.includes(trip.id)) return prev;
+      const remainingTripIds = ids.filter((id) => id !== trip.id);
+      if (trip.selectedFare?.packageSlug === CarPackageSlug.CARPOOL) {
+        const seatsReleased = trip.selectedFare?.requestedSeats ?? 1;
+        const nextSeats = (prev.availableSeats ?? 0) + seatsReleased;
+        return {
+          ...prev,
+          availableSeats: prev.capacity !== undefined ? Math.min(prev.capacity, nextSeats) : nextSeats,
+          activeTripIds: remainingTripIds,
+        };
+      }
+      return {
+        ...prev,
+        availableSeats: prev.capacity ?? prev.availableSeats,
+        activeTripIds: remainingTripIds,
+      };
+    });
+  }, []);
+
+  /** Process Stripe payment-success WS events one at a time (carpool may fire back-to-back). */
+  const [paidTripProcessQueue, setPaidTripProcessQueue] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (paidTripProcessQueue.length === 0) return;
+    const tripID = paidTripProcessQueue[0];
+    let cancelled = false;
+    void (async () => {
+      try {
+        const path = BackendEndpoints.GET_TRIP.replace("{id}", tripID);
+        const res = await apiFetch(path);
+        if (!res.ok || cancelled) return;
+        const body = await res.json();
+        const data = body.data;
+        if (!data?.id || cancelled) return;
+        restoreSeatsAfterTrip(data as Trip);
+        setActiveTrip((prev) => (prev?.id === tripID ? null : prev));
+      } catch (e) {
+        console.error("driver ws: payment success handling", e);
+      } finally {
+        if (!cancelled) {
+          setPaidTripProcessQueue((q) => q.slice(1));
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [paidTripProcessQueue, restoreSeatsAfterTrip]);
 
   useEffect(() => {
     if (ws?.readyState === WebSocket.OPEN && location && geohash) {
@@ -92,11 +149,21 @@ export const useDriverStreamConnection = ({
         case TripEvents.DriverRegister:
           setDriver(message.data);
           break;
+        case TripEvents.PaymentSuccess: {
+          const raw = message.data as { tripID?: string };
+          const tid = raw?.tripID;
+          if (tid) {
+            setPaidTripIds((p) => (p.includes(tid) ? p : [...p, tid]));
+            setPaidTripProcessQueue((q) => (q.includes(tid) ? q : [...q, tid]));
+          }
+          break;
+        }
       }
 
-
       if (isValidTripEvent(message.type)) {
-        setTripStatus(message.type);
+        if (message.type !== TripEvents.PaymentSuccess) {
+          setTripStatus(message.type);
+        }
       } else {
         setError(`Unknown message type "${message.type}", allowed types are: ${Object.values(TripEvents).join(', ')}`);
       }
@@ -117,8 +184,7 @@ export const useDriverStreamConnection = ({
         websocket.close();
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userID]);
+  }, [userID, packageSlug]);
 
   const sendMessage = (message: ClientWsMessage) => {
     if (ws?.readyState === WebSocket.OPEN) {
@@ -133,6 +199,8 @@ export const useDriverStreamConnection = ({
     setRequestedTrip(null);
     setActiveTrip(null);
     setPendingCarpoolRequests([]);
+    setPaidTripIds([]);
+    setPaidTripProcessQueue([]);
   }
 
   const acceptPendingRequest = (trip: Trip) => {
@@ -178,26 +246,5 @@ export const useDriverStreamConnection = ({
     });
   };
 
-  const restoreSeatsAfterTrip = (trip: Trip) => {
-    setDriver((prev: Driver | null) => {
-      if (!prev) return prev;
-      const remainingTripIds = (prev.activeTripIds ?? []).filter((id) => id !== trip.id);
-      if (trip.selectedFare?.packageSlug === CarPackageSlug.CARPOOL) {
-        const seatsReleased = trip.selectedFare?.requestedSeats ?? 1;
-        const nextSeats = (prev.availableSeats ?? 0) + seatsReleased;
-        return {
-          ...prev,
-          availableSeats: prev.capacity !== undefined ? Math.min(prev.capacity, nextSeats) : nextSeats,
-          activeTripIds: remainingTripIds,
-        };
-      }
-      return {
-        ...prev,
-        availableSeats: prev.capacity ?? prev.availableSeats,
-        activeTripIds: remainingTripIds,
-      };
-    });
-  };
-
-  return { error, tripStatus, driver, requestedTrip, activeTrip, pendingCarpoolRequests, resetTripStatus, sendMessage, setTripStatus, setActiveTrip, patchDriverSeats, reserveSeatsForAcceptedTrip, restoreSeatsAfterTrip, acceptPendingRequest, declinePendingRequest, triedDriverIdsMap };
+  return { error, tripStatus, driver, requestedTrip, activeTrip, pendingCarpoolRequests, paidTripIds, clearPaidTripMarkers, resetTripStatus, sendMessage, setTripStatus, setActiveTrip, patchDriverSeats, reserveSeatsForAcceptedTrip, restoreSeatsAfterTrip, acceptPendingRequest, declinePendingRequest, triedDriverIdsMap };
 }

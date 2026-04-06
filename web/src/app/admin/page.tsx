@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import { API_URL, DASHBOARD_MOCK } from "../../constants";
+import { API_URL, DASHBOARD_MOCK, DASHBOARD_FALLBACK_MOCK } from "../../constants";
 import { apiFetch } from "../../lib/api";
-import { getMockFinanceDashboard } from "../../lib/dashboardMockData";
+import { getMockFinanceDashboard, isLiveFinanceDashboardEmpty } from "../../lib/dashboardMockData";
 import { useSession } from "../../hooks/useSession";
 
 type AuditEntry = {
@@ -59,6 +59,7 @@ export default function AdminPage() {
   const [regions, setRegions] = useState<RegionsData | null>(null);
   const [categories, setCategories] = useState<CatsData | null>(null);
   const [dashErr, setDashErr] = useState("");
+  const [adminDashFallback, setAdminDashFallback] = useState(false);
   const [ledgerRows, setLedgerRows] = useState<LedgerRow[]>([]);
   const [ledgerOffset, setLedgerOffset] = useState(0);
   const [ledgerPageSize, setLedgerPageSize] = useState(50);
@@ -139,6 +140,7 @@ export default function AdminPage() {
     }
 
     if (DASHBOARD_MOCK) {
+      setAdminDashFallback(false);
       const { revenue, regions, categories } = getMockFinanceDashboard("month");
       setDashErr("");
       setRevenue(revenue);
@@ -154,8 +156,20 @@ export default function AdminPage() {
       const b2 = await r2.json();
       const b3 = await r3.json();
       if (!r1.ok || !r2.ok || !r3.ok) {
+        setAdminDashFallback(false);
         setDashErr(b1?.error?.message || b2?.error?.message || b3?.error?.message || "Dashboard load failed");
+      } else if (
+        DASHBOARD_FALLBACK_MOCK &&
+        isLiveFinanceDashboardEmpty(b1.data, b2.data, b3.data)
+      ) {
+        const { revenue, regions, categories } = getMockFinanceDashboard("month");
+        setDashErr("");
+        setRevenue(revenue);
+        setRegions(regions);
+        setCategories(categories);
+        setAdminDashFallback(true);
       } else {
+        setAdminDashFallback(false);
         setDashErr("");
         setRevenue(b1.data);
         setRegions(b2.data);
@@ -331,6 +345,12 @@ export default function AdminPage() {
           {DASHBOARD_MOCK && (
             <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
               Finance overview below uses mock data. Unset <code className="font-mono">NEXT_PUBLIC_DASHBOARD_MOCK</code> for live metrics.
+            </p>
+          )}
+          {adminDashFallback && !DASHBOARD_MOCK && (
+            <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              Live API returned no ledger rows; showing sample charts. Set{" "}
+              <code className="font-mono">NEXT_PUBLIC_DASHBOARD_FALLBACK_MOCK=false</code> to show empty data instead.
             </p>
           )}
           {dashErr && <p className="text-red-600 text-sm">{dashErr}</p>}

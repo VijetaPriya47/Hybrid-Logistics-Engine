@@ -72,9 +72,14 @@ func (r *mongoRepository) UpdateTrip(ctx context.Context, tripID string, status 
 		update["$set"].(bson.M)["driver"] = domainDriver
 	}
 
-	// Add status check to ensure we only update if it's still pending
-	// This prevents the race condition where two drivers accept the same trip.
-	filter := bson.M{"_id": _id, "status": "pending"}
+	// Driver assignment: only from pending (avoids two drivers winning the same trip).
+	// Status-only updates (nil driver), e.g. payment consumer -> "payed", match by id only.
+	var filter bson.M
+	if driver != nil {
+		filter = bson.M{"_id": _id, "status": "pending"}
+	} else {
+		filter = bson.M{"_id": _id}
+	}
 	result, err := r.db.Collection(db.TripsCollection).UpdateOne(ctx, filter, update)
 	if err != nil {
 		return err
@@ -176,10 +181,14 @@ func (r *mongoRepository) ListTripsForUser(ctx context.Context, userID string, l
 	if limit <= 0 || limit > 500 {
 		limit = 100
 	}
-	filter := bson.M{"$or": []bson.M{
-		{"userID": userID},
-		{"driver.id": userID},
-	}}
+	// Only trips that completed checkout (same event that writes the finance ledger).
+	filter := bson.M{
+		"status": "payed",
+		"$or": []bson.M{
+			{"userID": userID},
+			{"driver.id": userID},
+		},
+	}
 	opts := options.Find().SetSort(bson.D{{Key: "_id", Value: -1}}).SetLimit(int64(limit))
 	cur, err := r.db.Collection(db.TripsCollection).Find(ctx, filter, opts)
 	if err != nil {

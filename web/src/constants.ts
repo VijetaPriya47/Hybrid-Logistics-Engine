@@ -36,7 +36,17 @@ const getWsUrl = () => {
 
 export const WEBSOCKET_URL = getWsUrl();
 
-/** When `true`, `/dashboard` and admin finance overview use local sample data instead of calling the gateway. */
-export const DASHBOARD_MOCK =
-  typeof process.env.NEXT_PUBLIC_DASHBOARD_MOCK === "string" &&
-  process.env.NEXT_PUBLIC_DASHBOARD_MOCK.toLowerCase() === "true";
+function envTruthy(raw: string | undefined): boolean {
+  if (raw == null || raw.trim() === "") return false;
+  const s = raw.trim().toLowerCase();
+  return s === "true" || s === "1" || s === "yes" || s === "on";
+}
+
+/** When set, `/dashboard` and admin finance overview use sample data only (no gateway finance calls). Baked in at Next build time. */
+export const DASHBOARD_MOCK = envTruthy(process.env.NEXT_PUBLIC_DASHBOARD_MOCK);
+
+/**
+ * When set, after a successful API response, if revenue/regions/categories are all empty (no ledger yet),
+ * the UI fills charts with the same sample data. Useful on Railway when webhooks have not posted payments.
+ */
+export const DASHBOARD_FALLBACK_MOCK = envTruthy(process.env.NEXT_PUBLIC_DASHBOARD_FALLBACK_MOCK);

@@ -230,6 +230,31 @@ func handleStripeWebhook(w http.ResponseWriter, r *http.Request, rb *messaging.R
 			return
 		}
 		log.Printf("stripe webhook: published payment.event.success for trip_id=%s user_id=%s amount_cents=%d", tripID, userID, session.AmountTotal)
+
+		// Push to open rider + driver WebSockets (same routing key as AMQP; clients do not receive this via queue consumers).
+		wsData := map[string]any{
+			"tripID":      tripID,
+			"userID":      userID,
+			"driverID":    payload.DriverID,
+			"amountCents": payload.AmountCents,
+			"currency":    payload.Currency,
+		}
+		notify := func(uid string) {
+			uid = strings.TrimSpace(uid)
+			if uid == "" {
+				return
+			}
+			if err := connManager.SendMessage(uid, contracts.WSMessage{
+				Type: contracts.PaymentEventSuccess,
+				Data: wsData,
+			}); err != nil {
+				log.Printf("stripe webhook: ws payment success to %s: %v", uid, err)
+			}
+		}
+		notify(userID)
+		if d := strings.TrimSpace(payload.DriverID); d != "" && d != userID {
+			notify(d)
+		}
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 		return

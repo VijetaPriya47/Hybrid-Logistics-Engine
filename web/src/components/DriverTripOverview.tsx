@@ -36,6 +36,10 @@ interface DriverTripOverviewProps {
   pendingCarpoolRequests?: Trip[];
   availableSeats?: number;
   activeTrip?: Trip | null;
+  /** From driver gRPC state — all legs currently assigned to this driver. */
+  activeTripIds?: string[];
+  /** Trip IDs that received `payment.event.success` over the driver WebSocket. */
+  paidTripIds?: string[];
   completedTrip?: {
     tripId: string;
     riderId: string;
@@ -57,6 +61,8 @@ export const DriverTripOverview = ({
   pendingCarpoolRequests = [],
   availableSeats,
   activeTrip,
+  activeTripIds = [],
+  paidTripIds = [],
   completedTrip,
   onAcceptPending,
   onDeclinePending,
@@ -205,6 +211,31 @@ export const DriverTripOverview = ({
             {hasSeats && (
               <div className="text-center text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-3 py-1.5 rounded-full">
                 🟢 {availableSeats} seat{availableSeats !== 1 ? 's' : ''} available for carpool
+              </div>
+            )}
+            {activeTripIds.length > 0 && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">Accepted rides — payment</p>
+                <ul className="space-y-1.5">
+                  {activeTripIds.map((id) => {
+                    const paid = paidTripIds.includes(id);
+                    return (
+                      <li
+                        key={id}
+                        className="flex items-center justify-between gap-2 text-sm border border-slate-100 rounded-lg px-2 py-1.5 bg-white"
+                      >
+                        <span className="font-mono text-[11px] text-slate-600 truncate" title={id}>{id.slice(0, 12)}…</span>
+                        <span
+                          className={`shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                            paid ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"
+                          }`}
+                        >
+                          {paid ? "Paid" : "Awaiting payment"}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
             )}
           </div>

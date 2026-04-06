@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button } from "../../components/ui/button";
-import { DASHBOARD_MOCK } from "../../constants";
+import { DASHBOARD_MOCK, DASHBOARD_FALLBACK_MOCK } from "../../constants";
 import { apiFetch } from "../../lib/api";
-import { getMockFinanceDashboard } from "../../lib/dashboardMockData";
+import { getMockFinanceDashboard, isLiveFinanceDashboardEmpty } from "../../lib/dashboardMockData";
 import { useSession } from "../../hooks/useSession";
 
 type RevenuePoint = { period?: string; amount_cents?: number };
@@ -33,21 +33,26 @@ export default function DashboardPage() {
   const [categories, setCategories] = useState<CatsData | null>(null);
   const [trendGranularity, setTrendGranularity] = useState<"day" | "month" | "year">("day");
   const [error, setError] = useState("");
+  const [dashFetched, setDashFetched] = useState(false);
+  const [usingFallbackMock, setUsingFallbackMock] = useState(false);
 
   useEffect(() => {
     if (!ready || !session) return;
     if (session.user.role !== "business" && session.user.role !== "admin") return;
 
+    setDashFetched(false);
+
     (async () => {
-      if (DASHBOARD_MOCK) {
-        const { revenue, regions, categories } = getMockFinanceDashboard(trendGranularity);
-        setRevenue(revenue);
-        setRegions(regions);
-        setCategories(categories);
-        setError("");
-        return;
-      }
+      setUsingFallbackMock(false);
       try {
+        if (DASHBOARD_MOCK) {
+          const { revenue, regions, categories } = getMockFinanceDashboard(trendGranularity);
+          setRevenue(revenue);
+          setRegions(regions);
+          setCategories(categories);
+          setError("");
+          return;
+        }
         const q = `trend_granularity=${trendGranularity}`;
         const [r1, r2, r3] = await Promise.all([
           apiFetch(`/api/finance/dashboard/revenue?${q}`),
@@ -57,12 +62,31 @@ export default function DashboardPage() {
         const b1 = await r1.json();
         const b2 = await r2.json();
         const b3 = await r3.json();
+
+        if (
+          DASHBOARD_FALLBACK_MOCK &&
+          r1.ok &&
+          r2.ok &&
+          r3.ok &&
+          isLiveFinanceDashboardEmpty(b1.data, b2.data, b3.data)
+        ) {
+          const { revenue, regions, categories } = getMockFinanceDashboard(trendGranularity);
+          setRevenue(revenue);
+          setRegions(regions);
+          setCategories(categories);
+          setError("");
+          setUsingFallbackMock(true);
+          return;
+        }
+
         if (!r1.ok) setError(b1?.error?.message || "Revenue failed");
         else setRevenue(b1.data);
         if (r2.ok) setRegions(b2.data);
         if (r3.ok) setCategories(b3.data);
       } catch {
         setError("Network error");
+      } finally {
+        setDashFetched(true);
       }
     })();
   }, [ready, session, trendGranularity]);
@@ -98,6 +122,12 @@ export default function DashboardPage() {
   const cur = revenue?.currency || "usd";
   const trend = revenue?.trend ?? [];
   const maxTrend = Math.max(1, ...trend.map((p) => p.amount_cents ?? 0));
+  const showEmptyHint =
+    dashFetched &&
+    !DASHBOARD_MOCK &&
+    !usingFallbackMock &&
+    !error &&
+    isLiveFinanceDashboardEmpty(revenue, regions, categories);
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
@@ -108,7 +138,11 @@ export default function DashboardPage() {
             <p className="text-sm text-slate-500">{session.user.email} · {session.user.role}</p>
             <p className="text-xs text-slate-400 mt-1">
               {DASHBOARD_MOCK ? (
-                <span className="text-amber-700">Mock data (set NEXT_PUBLIC_DASHBOARD_MOCK=false for live API).</span>
+                <span className="text-amber-700">Mock-only mode (set NEXT_PUBLIC_DASHBOARD_MOCK=false for live API).</span>
+              ) : usingFallbackMock ? (
+                <span className="text-amber-800">
+                  Sample charts: live API returned no ledger rows yet (set NEXT_PUBLIC_DASHBOARD_FALLBACK_MOCK=false to hide when empty).
+                </span>
               ) : (
                 "Revenue counts rider payments once per trip (no double-count)."
               )}
@@ -130,6 +164,19 @@ export default function DashboardPage() {
         </div>
 
         {error && <p className="text-red-600 text-sm">{error}</p>}
+        {showEmptyHint && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+            <p className="font-medium">No finance data yet</p>
+            <p className="mt-1 text-amber-900/90">
+              The dashboard reads from the ledger after successful Stripe checkouts. To preview the UI without payments, set on your{" "}
+              <strong>web</strong> Railway service (then redeploy):{" "}
+              <code className="rounded bg-white/80 px-1 py-0.5 font-mono text-xs">NEXT_PUBLIC_DASHBOARD_FALLBACK_MOCK=true</code>{" "}
+              (live API first, sample data if empty), or{" "}
+              <code className="rounded bg-white/80 px-1 py-0.5 font-mono text-xs">NEXT_PUBLIC_DASHBOARD_MOCK=true</code>{" "}
+              (always sample data). Next.js bakes these in at <strong>build</strong> time.
+            </p>
+          </div>
+        )}
 
         <section className="bg-white rounded-xl border border-slate-200 p-4">
           <h2 className="font-medium text-slate-800 mb-1">Global revenue</h2>

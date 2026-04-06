@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "../../../components/ui/button";
 import { apiFetch } from "../../../lib/api";
 import { useSession } from "../../../hooks/useSession";
@@ -41,6 +41,78 @@ function formatMoney(cents: number | undefined, currency = "usd") {
   return `${currency.toUpperCase()} ${v}`;
 }
 
+function fareCents(row: RideRow): number | null {
+  const raw = row.fare_total_cents;
+  if (raw == null || !Number.isFinite(Number(raw))) return null;
+  return Math.round(Number(raw));
+}
+
+function periodKey(iso: string | undefined, granularity: "day" | "month"): string | null {
+  if (!iso?.trim()) return null;
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return null;
+  const d = new Date(iso);
+  if (granularity === "day") return d.toISOString().slice(0, 10);
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
+/** Totals and driver earnings buckets from ride history (when ledger has not posted yet). */
+function financeFromRideHistory(rows: RideRow[], seriesGranularity: "day" | "month") {
+  let totalIncomeCents = 0;
+  let totalExpenseCents = 0;
+  const earnBuckets = new Map<string, number>();
+
+  for (const r of rows) {
+    const cents = fareCents(r);
+    if (cents == null) continue;
+    const role = (r.role || "").toLowerCase();
+    if (role === "driver") {
+      totalIncomeCents += cents;
+      const key = periodKey(r.when_rfc3339, seriesGranularity);
+      if (key) earnBuckets.set(key, (earnBuckets.get(key) ?? 0) + cents);
+    } else if (role === "rider") {
+      totalExpenseCents += cents;
+    }
+  }
+
+  const earningSeries: AmountPoint[] = Array.from(earnBuckets.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([period, amount_cents]) => ({ period, amount_cents }));
+
+  const hasFareRows = rows.some((r) => fareCents(r) != null);
+  return {
+    totalIncomeCents,
+    totalExpenseCents,
+    netCents: totalIncomeCents - totalExpenseCents,
+    earningSeries,
+    hasFareRows,
+  };
+}
+
+function recentActivityFromRides(rows: RideRow[], currency: string): LedgerTx[] {
+  const out: LedgerTx[] = [];
+  for (const r of rows) {
+    const cents = fareCents(r);
+    if (cents == null) continue;
+    const role = (r.role || "").toLowerCase();
+    if (role !== "driver" && role !== "rider") continue;
+    out.push({
+      type: role === "driver" ? "credit" : "debit",
+      amount_cents: cents,
+      currency,
+      created_at_rfc3339: r.when_rfc3339,
+      source_trip_id: r.trip_id,
+      package_slug: r.package_slug,
+    });
+  }
+  out.sort((a, b) => {
+    const ta = a.created_at_rfc3339 ? new Date(a.created_at_rfc3339).getTime() : 0;
+    const tb = b.created_at_rfc3339 ? new Date(b.created_at_rfc3339).getTime() : 0;
+    return tb - ta;
+  });
+  return out;
+}
+
 export default function FinanceMePage() {
   const { session, ready, logout } = useSession();
   const [rows, setRows] = useState<RideRow[]>([]);
@@ -74,6 +146,28 @@ export default function FinanceMePage() {
     })();
   }, [ready, session, seriesGranularity]);
 
+  const rideFinance = useMemo(
+    () => financeFromRideHistory(rows, seriesGranularity),
+    [rows, seriesGranularity],
+  );
+
+  const ledgerHasTimeSeries = (summary?.earning_series?.length ?? 0) > 0;
+  const ledgerHasRecent = (summary?.recent?.length ?? 0) > 0;
+  const useRideTotals =
+    rideFinance.hasFareRows && !ledgerHasTimeSeries && !ledgerHasRecent;
+  const displayIncome = useRideTotals ? rideFinance.totalIncomeCents : (summary?.total_income_cents ?? 0);
+  const displayExpense = useRideTotals ? rideFinance.totalExpenseCents : (summary?.total_expense_cents ?? 0);
+  const displayNet = useRideTotals ? rideFinance.netCents : (summary?.net_cents ?? 0);
+
+  const ledgerSeries = summary?.earning_series ?? [];
+  const displaySeries =
+    ledgerSeries.length > 0 ? ledgerSeries : rideFinance.earningSeries;
+
+  const ledgerRecent = summary?.recent ?? [];
+  const currency = summary?.currency || "usd";
+  const displayRecent =
+    ledgerRecent.length > 0 ? ledgerRecent : recentActivityFromRides(rows, currency);
+
   if (!ready) {
     return (
       <div className="min-h-screen flex items-center justify-center text-slate-500">Loading…</div>
@@ -102,9 +196,8 @@ export default function FinanceMePage() {
     );
   }
 
-  const cur = summary?.currency || "usd";
-  const series = summary?.earning_series ?? [];
-  const maxEarn = Math.max(1, ...series.map((p) => p.amount_cents ?? 0));
+  const cur = currency;
+  const maxEarn = Math.max(1, ...displaySeries.map((p) => p.amount_cents ?? 0));
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
@@ -130,20 +223,20 @@ export default function FinanceMePage() {
           <div className="bg-white rounded-xl border border-slate-200 p-4">
             <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Total income</p>
             <p className="text-2xl font-semibold text-emerald-700 mt-1">
-              +{formatMoney(summary?.total_income_cents, cur)}
+              +{formatMoney(displayIncome, cur)}
             </p>
           </div>
           <div className="bg-white rounded-xl border border-slate-200 p-4">
             <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Total expenses</p>
             <p className="text-2xl font-semibold text-red-600 mt-1">
-              −{formatMoney(summary?.total_expense_cents, cur)}
+              −{formatMoney(displayExpense, cur)}
             </p>
           </div>
           <div className="bg-white rounded-xl border border-slate-200 p-4">
             <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Net balance</p>
-            <p className={`text-2xl font-semibold mt-1 ${(summary?.net_cents ?? 0) >= 0 ? "text-slate-900" : "text-red-700"}`}>
-              {(summary?.net_cents ?? 0) >= 0 ? "+" : "−"}
-              {formatMoney(Math.abs(summary?.net_cents ?? 0), cur)}
+            <p className={`text-2xl font-semibold mt-1 ${displayNet >= 0 ? "text-slate-900" : "text-red-700"}`}>
+              {displayNet >= 0 ? "+" : "−"}
+              {formatMoney(Math.abs(displayNet), cur)}
             </p>
           </div>
         </div>
@@ -170,11 +263,11 @@ export default function FinanceMePage() {
               </Button>
             </div>
           </div>
-          {series.length === 0 ? (
-            <p className="text-sm text-slate-500">No earning data yet (driver credits appear after paid trips).</p>
+          {displaySeries.length === 0 ? (
+            <p className="text-sm text-slate-500">No earning data yet (driver trips with fares will appear here).</p>
           ) : (
             <div className="flex items-end gap-1 h-40 border-b border-slate-200 pb-1">
-              {series.map((p) => (
+              {displaySeries.map((p) => (
                 <div key={p.period} className="flex-1 min-w-0 flex flex-col items-center gap-1">
                   <div
                     className="w-full max-w-[28px] mx-auto rounded-t bg-emerald-500/90"
@@ -190,11 +283,14 @@ export default function FinanceMePage() {
 
         <section className="bg-white rounded-xl border border-slate-200 p-4">
           <h2 className="font-medium text-slate-800 mb-3">Recent activity</h2>
+          {ledgerRecent.length === 0 && displayRecent.length > 0 && (
+            <p className="text-xs text-slate-500 mb-2">From ride fares until ledger entries sync.</p>
+          )}
           <ul className="divide-y divide-slate-100">
-            {(summary?.recent ?? []).length === 0 && (
-              <li className="py-6 text-center text-slate-500 text-sm">No ledger entries yet.</li>
+            {displayRecent.length === 0 && (
+              <li className="py-6 text-center text-slate-500 text-sm">No activity yet.</li>
             )}
-            {(summary?.recent ?? []).map((t, i) => {
+            {displayRecent.map((t, i) => {
               const isCredit = t.type === "credit";
               const sign = isCredit ? "+" : "−";
               const color = isCredit ? "text-emerald-700" : "text-red-600";
@@ -218,7 +314,7 @@ export default function FinanceMePage() {
         <section>
           <h2 className="text-lg font-medium text-slate-900 mb-2">Ride history</h2>
           <p className="text-xs text-slate-500 mb-3">
-            Trips you booked as a rider and trips you accepted as a driver (any status).
+            Paid trips only: you appear as rider or driver after Stripe checkout completes (test cards work the same once webhooks reach the gateway).
           </p>
           <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
             <table className="w-full text-sm">
@@ -241,8 +337,8 @@ export default function FinanceMePage() {
                     </td>
                   </tr>
                 )}
-                {rows.map((t) => (
-                  <tr key={t.trip_id || Math.random()} className="border-t border-slate-100">
+                {rows.map((t, i) => (
+                  <tr key={t.trip_id || `ride-${i}`} className="border-t border-slate-100">
                     <td className="p-3 whitespace-nowrap">{t.when_rfc3339 || "—"}</td>
                     <td className="p-3 capitalize">{t.role || "—"}</td>
                     <td className="p-3 capitalize">{t.status || "—"}</td>

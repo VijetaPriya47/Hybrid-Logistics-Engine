@@ -25,7 +25,7 @@ Inactive business accounts cannot sign in (`PermissionDenied`).
 
 - `GET /api/finance/me` — customer; raw ledger rows (`GetMyTransactions`).
 - `GET /api/finance/me/summary` — customer; income, expenses, net, earning series, recent rows (`GetCustomerDashboard`). Query: `from`, `to` (RFC3339), `series_granularity` (`day` \| `month`), `recent_limit`.
-- `GET /api/trips/history` — customer; MongoDB trips for rider or assigned driver (`TripService.ListMyTrips`).
+- `GET /api/trips/history` — customer; MongoDB trips for rider or assigned driver **with `status: payed` only** (`TripService.ListMyTrips`). That status is set when trip-service consumes `payment.event.success` (same Stripe checkout completion that should populate the finance ledger).
 - `GET /api/finance/dashboard/revenue` — business or admin; query `from`, `to`, `trend_granularity` (`day` \| `month` \| `year`). Totals use **rider debits only** (one amount per trip).
 - `GET /api/finance/dashboard/regions` — business or admin; `from`, `to`.
 - `GET /api/finance/dashboard/categories` — business or admin; `from`, `to`. Groups by car **package**; net per package from debits; rider/driver distinct counts from debits/credits.
@@ -37,6 +37,14 @@ Inactive business accounts cannot sign in (`PermissionDenied`).
 - `GET /api/admin/transactions` — admin; ledger with filters: `limit` (default 100, max 500), `offset` (default 0, server-capped), `user_id`, `trip_id`, `email`, `package`, `rider_user_id`, `driver_user_id`. Response `data` includes `rows`, `total_count`, and `has_more` for pagination.
 
 Trip `userID` in JSON is ignored for identity: the gateway overwrites it with the JWT `sub`.
+
+### Stripe test mode, webhooks, and “completed” trips
+
+**Test cards are real checkouts in test mode:** completing Stripe Checkout with a test card (for example `4242 4242 4242 4242`) still produces `checkout.session.completed` and the gateway can publish `payment.event.success` — **no live card required**. What usually blocks the flow locally is the **webhook URL**: Stripe must POST to your gateway’s `/webhook/stripe` (use [Stripe CLI](https://stripe.com/docs/stripe-cli) `stripe listen --forward-to ...` for localhost).
+
+**How you know a trip is paid end-to-end:** trip documents move to **`payed`** in Mongo (typo preserved in code) when the trip-service payment consumer runs; the finance ledger rows appear when platform-service consumes the same event. Ride history lists only **`payed`** trips, so it stays aligned with “checkout succeeded” rather than “driver accepted.”
+
+**Web UI:** After the gateway publishes `payment.event.success`, it also pushes **`payment.event.success`** over open **rider and driver** WebSockets (same payload keys as the AMQP message: `tripID`, `userID`, `driverID`, `amountCents`, `currency`) so clients can react without polling. Test-mode Stripe checkouts trigger this the same way as live mode once the webhook fires.
 
 ## JWT claims
 
@@ -81,8 +89,8 @@ make generate-proto
 Next.js routes:
 
 - `/login` — Google (riders/drivers) and email/password (admin/business); forgot-password request; requires `NEXT_PUBLIC_GOOGLE_CLIENT_ID` for Google.
-- `/finance/me` — customer dashboard (summary, earnings chart, recent ledger colors) plus ride history table.
-- `/dashboard` — business/admin charts and tables for revenue, regions, packages. For UI demos without backend data, set `NEXT_PUBLIC_DASHBOARD_MOCK=true` on the web app (mock fills only those finance widgets; admin ledger and APIs stay live).
+- `/finance/me` — customer dashboard (summary, earnings chart, recent ledger colors) plus **paid-only** ride history. If the ledger response is empty while history has rows, totals and charts can still use **ride history** fares until you fix the consumer/webhook path (driver rows = income, rider rows = expenses).
+- `/dashboard` — business/admin charts and tables for revenue, regions, packages. **Sample data (Next.js build-time env on the web app):** `NEXT_PUBLIC_DASHBOARD_MOCK=true` always uses mock charts (skips finance API). `NEXT_PUBLIC_DASHBOARD_FALLBACK_MOCK=true` calls the live API and, if revenue/regions/categories are all empty (typical before Stripe posts to the ledger), fills the same mock charts. Values `1` / `yes` / `on` also count as true. Redeploy the web service after changing these (they are inlined at build).
 - `/admin` — business overview, audit log table, business users + active toggle, transaction filters, provisioning forms (admin creation requires JWT `can_create_admins`).
 - `/reset-password` — optional `?token=` query or paste token.
 

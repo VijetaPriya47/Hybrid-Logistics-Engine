@@ -58,7 +58,7 @@ type TripRepository interface {
 	UpdateRideFareTotal(ctx context.Context, fareID string, totalPriceInCents float64) error
 	UpdateTripRideFareTotal(ctx context.Context, tripID string, totalPriceInCents float64) error
 	UpdateRideFareSeats(ctx context.Context, fareID string, seats int32) error
-	// ListTripsForUser returns trips where the user is the rider (userID) or assigned driver (driver.id), newest first.
+	// ListTripsForUser returns paid trips (status "payed") where the user is the rider or assigned driver, newest first.
 	ListTripsForUser(ctx context.Context, userID string, limit int32) ([]*TripModel, error)
 }
 
