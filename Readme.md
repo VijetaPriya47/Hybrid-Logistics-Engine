@@ -7,7 +7,7 @@ A microservices-based backend system simulating a ride-sharing platform. The sys
 ## Project Demo
 
 Video demo:
-[https://drive.google.com/file/d/1jHZYCv_tlQGjw5cV0MShal-_ezUGujMV/view](https://drive.google.com/file/d/1jHZYCv_tlQGjw5cV0MShal-_ezUGujMV/view)
+[https://drive.google.com/file/d/1oNwpEJHBLiglWiMM_PJb7s0-QGT5Mm3K/view?usp=sharing](https://drive.google.com/file/d/1oNwpEJHBLiglWiMM_PJb7s0-QGT5Mm3K/view?usp=sharing)
 
 Documentation - https://vijetapriya47.github.io/RideSync/
 
