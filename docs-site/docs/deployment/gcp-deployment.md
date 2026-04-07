@@ -75,6 +75,14 @@ docker build -t ${REGION}-docker.pkg.dev/${PROJECT_ID}/ride-sharing/payment-serv
 docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/ride-sharing/payment-service:latest
 ```
 
+**Platform Service** (finance ledger gRPC + user auth gRPC + RabbitMQ payment + audit consumers; PostgreSQL + same `RABBITMQ_URI` as payment)
+```bash
+docker build -t ${REGION}-docker.pkg.dev/${PROJECT_ID}/ride-sharing/platform-service:latest --platform linux/amd64 -f infra/production/docker/platform-service.Dockerfile .
+docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/ride-sharing/platform-service:latest
+```
+
+Production Kubernetes manifests under `infra/production/k8s/` do not yet include a Deployment for platform-service; after pushing this image, add a workload and set `PLATFORM_SERVICE_URL` on the API gateway (or legacy `FINANCE_SERVICE_URL` / `USER_AUTH_SERVICE_URL`). See [Finance & RBAC](../features/finance-rbac.md) for ports and environment variables.
+
 ## 4. Deploy to GKE
 
 Create a GKE Cluster (if not exists):
@@ -121,7 +129,12 @@ kubectl get svc api-gateway
 
 ## 6. Frontend Deployment (Vercel)
 
-For the frontend, deploy the `web/` directory to Vercel. Ensure you set the environment variables in the Vercel dashboard as identified in `.env.local`:
+The repository root has no app `package.json` by default—the Next.js app is under **`web/`**. If Vercel is connected to the **whole repo** and you see `ENOENT ... package.json` at `/vercel/path0`, use either:
+
+1. **Recommended:** In the Vercel project, open **Settings → General → Root Directory** and set it to **`web`**, then redeploy; or  
+2. Rely on the **root `package.json`** in this repo: it runs `npm install` at the root (no deps) and `npm run build`, which runs `npm ci` and `next build` under `web/`.
+
+Set environment variables in the Vercel dashboard (see `web/.env.local` for local names):
 - `NEXT_PUBLIC_API_URL`: `http://<EXTERNAL-IP-OF-API-GATEWAY>:8081`
 - `NEXT_PUBLIC_WEBSOCKET_URL`: `ws://<EXTERNAL-IP-OF-API-GATEWAY>:8081/ws`
 - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`: Your Stripe Public Key

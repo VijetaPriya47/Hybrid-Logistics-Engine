@@ -16,6 +16,7 @@ k8s_yaml('./infra/development/k8s/rabbitmq-deployment.yaml')
 k8s_resource('rabbitmq', port_forwards=['5672', '15672'], labels='tooling')
 ### End RabbitMQ ###
 ### MongoDB ###
+k8s_yaml('./infra/development/k8s/mongodb-pvc.yaml')
 k8s_yaml('./infra/development/k8s/mongo-deployment.yaml')
 k8s_resource('mongodb', port_forwards=['27017:27017'], labels='tooling')
 ### End MongoDB ###

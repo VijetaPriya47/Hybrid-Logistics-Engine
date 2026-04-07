@@ -31,6 +31,41 @@ services:
     environment:
       - COLLECTOR_OTLP_ENABLED=true
 
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ridesync
+      POSTGRES_PASSWORD: ridesync
+      POSTGRES_DB: ridesync
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  platform-service:
+    build:
+      context: .
+      dockerfile: infra/development/docker/platform-service.Dockerfile
+    container_name: platform-service
+    environment:
+      - DATABASE_URL=postgres://ridesync:ridesync@postgres:5432/ridesync?sslmode=disable
+      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672/
+      - GRPC_ADDR=:9094
+      - JWT_SECRET=dev-insecure-change-me
+      - JWT_ISSUER=ridesync-auth
+      - JWT_AUDIENCE=ridesync-gateway
+      - SUPER_ADMIN_EMAIL=vijeta.admin@ridesync.com
+      - SUPER_ADMIN_PASSWORD=change-me
+      - GOOGLE_CLIENT_ID=
+      - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
+      - ENVIRONMENT=development
+      - PUBLIC_GATEWAY_URL=http://localhost:8081
+    depends_on:
+      - postgres
+      - rabbitmq
+      - jaeger
+
   api-gateway:
     build:
       context: .
@@ -43,9 +78,16 @@ services:
       - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672/
       - JAEGER_ENDPOINT=http://jaeger:14268/api/traces
       - ENVIRONMENT=development
+      - TRIP_SERVICE_URL=trip-service:8080
+      - PLATFORM_SERVICE_URL=platform-service:9094
+      - JWT_SECRET=dev-insecure-change-me
+      - JWT_ISSUER=ridesync-auth
+      - JWT_AUDIENCE=ridesync-gateway
     depends_on:
       - rabbitmq
       - jaeger
+      - platform-service
+      - trip-service
 
   trip-service:
     build:
@@ -106,8 +148,12 @@ services:
       - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8081
+      - NEXT_PUBLIC_GOOGLE_CLIENT_ID=
     depends_on:
       - api-gateway
 
+# Named volumes keep MongoDB and Postgres data across `docker compose down` / image rebuilds.
+# In production, prefer managed databases (e.g. Atlas, RDS) via MONGODB_URI and DATABASE_URL—data persists with the provider.
 volumes:
   mongodb_data:
+  postgres_data:

@@ -15,9 +15,16 @@ export const StripePaymentButton = ({
   isLoading = false,
 }: StripePaymentButtonProps) => {
   const handlePayment = async () => {
-    // Check if we are in mock mode
+    // Guard: do not silently "succeed" with mock session IDs in real environments.
+    // If you intentionally want to demo without Stripe, set NEXT_PUBLIC_ALLOW_MOCK_STRIPE_CHECKOUT=true.
     if (paymentSession.sessionID.startsWith("cs_test_mock_session_")) {
-      console.log("Mock session detected, simulating successful payment...");
+      const allowMock =
+        typeof process.env.NEXT_PUBLIC_ALLOW_MOCK_STRIPE_CHECKOUT === "string" &&
+        process.env.NEXT_PUBLIC_ALLOW_MOCK_STRIPE_CHECKOUT.toLowerCase() === "true";
+      if (!allowMock) {
+        alert("Payment is running in mock mode (no real Stripe Checkout session). Enable Stripe in payment-service (USE_STRIPE_API=true) or set NEXT_PUBLIC_ALLOW_MOCK_STRIPE_CHECKOUT=true for a demo-only bypass.");
+        return;
+      }
       window.location.href = "/?payment=success";
       return;
     }

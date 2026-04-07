@@ -54,6 +54,10 @@ export function useRiderStreamConnection(location: Coordinate, userID: string) {
         case TripEvents.NoDriversFound:
           setTripStatus(message.type);
           break;
+        case TripEvents.PaymentSuccess:
+          setPaymentSession(null);
+          setTripStatus(TripEvents.Completed);
+          break;
       }
     };
 

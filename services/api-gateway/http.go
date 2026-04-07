@@ -11,15 +11,19 @@ import (
 	"ride-sharing/shared/contracts"
 	"ride-sharing/shared/env"
 	"ride-sharing/shared/messaging"
+	pb "ride-sharing/shared/proto/trip"
 	"ride-sharing/shared/tracing"
 
 	"github.com/stripe/stripe-go/v81"
 	"github.com/stripe/stripe-go/v81/webhook"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 var tracer = tracing.GetTracer("api-gateway")
 
-func handleTripStart(w http.ResponseWriter, r *http.Request) {
+func handleTripStart(w http.ResponseWriter, r *http.Request, tripGRPC *grpc_clients.TripServiceClient) {
 	ctx, span := tracer.Start(r.Context(), "handleTripStart")
 	defer span.End()
 
@@ -36,20 +40,13 @@ func handleTripStart(w http.ResponseWriter, r *http.Request) {
 
 	defer r.Body.Close()
 
-	// Why we need to create a new client for each connection:
-	// because if a service is down, we don't want to block the whole application
-	// so we create a new client for each connection
-	tripService, err := grpc_clients.NewTripServiceClient()
-	if err != nil {
-		log.Printf("Failed to create trip service client: %v", err)
-		writeJSONError(w, http.StatusInternalServerError, "Internal server error")
+	sub, _, _, ok := authFromRequest(r)
+	if !applyCanonicalUserID(&reqBody.UserID, sub, ok) {
+		writeJSONError(w, http.StatusForbidden, "user mismatch or missing identity")
 		return
 	}
 
-	// Don't forget to close the client to avoid resource leaks!
-	defer tripService.Close()
-
-	trip, err := tripService.Client.CreateTrip(ctx, reqBody.toProto())
+	trip, err := tripGRPC.Client.CreateTrip(ctx, reqBody.toProto())
 	if err != nil {
 		log.Printf("DEBUG: gRPC CreateTrip failed: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to start trip: %v", err))
@@ -61,7 +58,7 @@ func handleTripStart(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, response)
 }
 
-func handleTripPreview(w http.ResponseWriter, r *http.Request) {
+func handleTripPreview(w http.ResponseWriter, r *http.Request, tripGRPC *grpc_clients.TripServiceClient) {
 	ctx, span := tracer.Start(r.Context(), "handleTripPreview")
 	defer span.End()
 
@@ -78,26 +75,13 @@ func handleTripPreview(w http.ResponseWriter, r *http.Request) {
 
 	defer r.Body.Close()
 
-	// validation
-	if reqBody.UserID == "" {
-		writeJSONError(w, http.StatusBadRequest, "user ID is required")
+	sub, _, _, ok := authFromRequest(r)
+	if !applyCanonicalUserID(&reqBody.UserID, sub, ok) {
+		writeJSONError(w, http.StatusForbidden, "user mismatch or missing identity")
 		return
 	}
 
-	// Why we need to create a new client for each connection:
-	// because if a service is down, we don't want to block the whole application
-	// so we create a new client for each connection
-	tripService, err := grpc_clients.NewTripServiceClient()
-	if err != nil {
-		log.Printf("Failed to create trip service client: %v", err)
-		writeJSONError(w, http.StatusInternalServerError, "Internal server error")
-		return
-	}
-
-	// Don't forget to close the client to avoid resource leaks!
-	defer tripService.Close()
-
-	tripPreview, err := tripService.Client.PreviewTrip(ctx, reqBody.toProto())
+	tripPreview, err := tripGRPC.Client.PreviewTrip(ctx, reqBody.toProto())
 	if err != nil {
 		log.Printf("DEBUG: gRPC PreviewTrip failed: %v", err)
 		writeJSONError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to preview trip: %v", err))
@@ -109,7 +93,7 @@ func handleTripPreview(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, response)
 }
 
-func handleIncreaseTripFare(w http.ResponseWriter, r *http.Request) {
+func handleIncreaseTripFare(w http.ResponseWriter, r *http.Request, tripGRPC *grpc_clients.TripServiceClient) {
 	ctx, span := tracer.Start(r.Context(), "handleIncreaseTripFare")
 	defer span.End()
 
@@ -125,20 +109,18 @@ func handleIncreaseTripFare(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	if reqBody.TripID == "" || reqBody.UserID == "" || reqBody.TotalPriceInCents <= 0 {
-		writeJSONError(w, http.StatusBadRequest, "tripID, userID, and totalPriceInCents are required")
+	sub, _, _, ok := authFromRequest(r)
+	if !applyCanonicalUserID(&reqBody.UserID, sub, ok) {
+		writeJSONError(w, http.StatusForbidden, "user mismatch or missing identity")
 		return
 	}
 
-	tripService, err := grpc_clients.NewTripServiceClient()
-	if err != nil {
-		log.Printf("Failed to create trip service client: %v", err)
-		writeJSONError(w, http.StatusInternalServerError, "Internal server error")
+	if reqBody.TripID == "" || reqBody.TotalPriceInCents <= 0 {
+		writeJSONError(w, http.StatusBadRequest, "tripID and totalPriceInCents are required")
 		return
 	}
-	defer tripService.Close()
 
-	resp, err := tripService.Client.IncreaseTripFare(ctx, reqBody.toProto())
+	resp, err := tripGRPC.Client.IncreaseTripFare(ctx, reqBody.toProto())
 	if err != nil {
 		log.Printf("IncreaseTripFare: %v", err)
 		writeJSONError(w, http.StatusBadRequest, fmt.Sprintf("Failed to increase fare: %v", err))
@@ -161,7 +143,8 @@ func handleStripeWebhook(w http.ResponseWriter, r *http.Request, rb *messaging.R
 
 	webhookKey := env.GetString("STRIPE_WEBHOOK_KEY", "")
 	if webhookKey == "" {
-		log.Printf("Webhook key is required")
+		log.Printf("stripe webhook: STRIPE_WEBHOOK_KEY is not set; cannot verify or publish payment success")
+		http.Error(w, "Stripe webhook not configured", http.StatusServiceUnavailable)
 		return
 	}
 
@@ -179,7 +162,7 @@ func handleStripeWebhook(w http.ResponseWriter, r *http.Request, rb *messaging.R
 		return
 	}
 
-	log.Printf("Received Stripe event: %v", event)
+	log.Printf("stripe webhook: received event type=%s id=%s", event.Type, event.ID)
 
 	switch event.Type {
 	case "checkout.session.completed":
@@ -192,10 +175,36 @@ func handleStripeWebhook(w http.ResponseWriter, r *http.Request, rb *messaging.R
 			return
 		}
 
+		tripID := session.Metadata["trip_id"]
+		userID := session.Metadata["user_id"]
+		if tripID == "" || userID == "" {
+			log.Printf("stripe webhook: checkout.session.completed session_id=%s missing trip_id or user_id in metadata (ledger and trip payed flow will not run). Ensure Checkout sessions are created by payment-service with trip_id, user_id, driver_id metadata — mock session IDs (cs_test_mock_*) never produce a real completed session.", session.ID)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte("ok"))
+			return
+		}
+
+		if session.PaymentStatus != stripe.CheckoutSessionPaymentStatusPaid &&
+			session.PaymentStatus != stripe.CheckoutSessionPaymentStatusNoPaymentRequired {
+			log.Printf("stripe webhook: checkout.session.completed session_id=%s payment_status=%s (amount may be unset until paid)", session.ID, session.PaymentStatus)
+		}
+
+		region := session.Metadata["region"]
+		if region == "" {
+			region = "unspecified"
+		}
+		cur := string(session.Currency)
+		if cur == "" {
+			cur = "usd"
+		}
 		payload := messaging.PaymentStatusUpdateData{
-			TripID:   session.Metadata["trip_id"],
-			UserID:   session.Metadata["user_id"],
-			DriverID: session.Metadata["driver_id"],
+			TripID:       tripID,
+			UserID:       userID,
+			DriverID:     session.Metadata["driver_id"],
+			AmountCents:  session.AmountTotal,
+			Currency:     cur,
+			Region:       region,
+			PackageSlug:  session.Metadata["package_slug"],
 		}
 
 		payloadBytes, err := json.Marshal(payload)
@@ -206,7 +215,7 @@ func handleStripeWebhook(w http.ResponseWriter, r *http.Request, rb *messaging.R
 		}
 
 		message := contracts.AmqpMessage{
-			OwnerID: session.Metadata["user_id"],
+			OwnerID: userID,
 			Data:    payloadBytes,
 		}
 
@@ -219,10 +228,45 @@ func handleStripeWebhook(w http.ResponseWriter, r *http.Request, rb *messaging.R
 			http.Error(w, "Failed to publish payment event", http.StatusInternalServerError)
 			return
 		}
+		log.Printf("stripe webhook: published payment.event.success for trip_id=%s user_id=%s amount_cents=%d", tripID, userID, session.AmountTotal)
+
+		// Push to open rider + driver WebSockets (same routing key as AMQP; clients do not receive this via queue consumers).
+		wsData := map[string]any{
+			"tripID":      tripID,
+			"userID":      userID,
+			"driverID":    payload.DriverID,
+			"amountCents": payload.AmountCents,
+			"currency":    payload.Currency,
+		}
+		notify := func(uid string) {
+			uid = strings.TrimSpace(uid)
+			if uid == "" {
+				return
+			}
+			if err := connManager.SendMessage(uid, contracts.WSMessage{
+				Type: contracts.PaymentEventSuccess,
+				Data: wsData,
+			}); err != nil {
+				log.Printf("stripe webhook: ws payment success to %s: %v", uid, err)
+			}
+		}
+		notify(userID)
+		if d := strings.TrimSpace(payload.DriverID); d != "" && d != userID {
+			notify(d)
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+		return
 	}
+
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write([]byte("ok"))
 }
 
-func handleUpdateTripSeats(w http.ResponseWriter, r *http.Request) {
+func handleUpdateTripSeats(w http.ResponseWriter, r *http.Request, tripGRPC *grpc_clients.TripServiceClient) {
+	ctx, span := tracer.Start(r.Context(), "handleUpdateTripSeats")
+	defer span.End()
+
 	if r.Method != http.MethodPost {
 		writeJSONError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
@@ -237,17 +281,24 @@ func handleUpdateTripSeats(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	payload, _ := json.Marshal(reqBody)
-	tripServiceHttpUrl := env.GetString("TRIP_SERVICE_HTTP_URL", "http://ridesync:8080")
-	resp, err := http.Post(fmt.Sprintf("%s/fares/update-seats", tripServiceHttpUrl), "application/json", strings.NewReader(string(payload)))
-	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, err.Error())
+	if reqBody.FareID == "" {
+		writeJSONError(w, http.StatusBadRequest, "fareID is required")
 		return
 	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		writeJSONError(w, resp.StatusCode, "failed to update seats")
+	_, err := tripGRPC.Client.UpdateFareSeats(ctx, &pb.UpdateFareSeatsRequest{
+		FareId: reqBody.FareID,
+		Seats:  reqBody.Seats,
+	})
+	if err != nil {
+		if st, ok := status.FromError(err); ok {
+			switch st.Code() {
+			case codes.InvalidArgument:
+				writeJSONError(w, http.StatusBadRequest, st.Message())
+				return
+			}
+		}
+		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -264,8 +315,8 @@ func writeJSONError(w http.ResponseWriter, code int, message string) {
 	writeJSON(w, code, response)
 }
 
-func handleGetTripStatus(w http.ResponseWriter, r *http.Request) {
-	_, span := tracer.Start(r.Context(), "handleGetTripStatus")
+func handleGetTripStatus(w http.ResponseWriter, r *http.Request, tripGRPC *grpc_clients.TripServiceClient) {
+	ctx, span := tracer.Start(r.Context(), "handleGetTripStatus")
 	defer span.End()
 
 	if r.Method != http.MethodGet {
@@ -280,26 +331,55 @@ func handleGetTripStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	tripID := parts[2]
 
-	tripServiceHttpUrl := env.GetString("TRIP_SERVICE_HTTP_URL", "http://ridesync:8080")
-	resp, err := http.Get(fmt.Sprintf("%s/trips/%s", tripServiceHttpUrl, tripID))
+	protoResp, err := tripGRPC.Client.GetTrip(ctx, &pb.GetTripRequest{TripId: tripID})
 	if err != nil {
+		if st, ok := status.FromError(err); ok {
+			switch st.Code() {
+			case codes.NotFound:
+				writeJSONError(w, http.StatusNotFound, st.Message())
+				return
+			case codes.InvalidArgument:
+				writeJSONError(w, http.StatusBadRequest, st.Message())
+				return
+			}
+		}
 		writeJSONError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
-		writeJSONError(w, resp.StatusCode, "failed to get trip status")
+	t := protoResp.GetTrip()
+	if t == nil {
+		writeJSONError(w, http.StatusNotFound, "trip not found")
 		return
 	}
 
-	var data interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+	sub, _, _, ok := authFromRequest(r)
+	if ok {
+		// Allow access only if caller is rider or assigned driver.
+		// This keeps `GET /trip/{id}` safe while enabling driver status polling.
+		riderID := strings.TrimSpace(t.GetUserID())
+		driverID := ""
+		if d := t.GetDriver(); d != nil {
+			driverID = strings.TrimSpace(d.GetId())
+		}
+		if sub == "" || (riderID != "" && sub != riderID && (driverID == "" || sub != driverID)) {
+			writeJSONError(w, http.StatusForbidden, "cannot access this trip")
+			return
+		}
+	}
+
+	mo := protojson.MarshalOptions{}
+	raw, err := mo.Marshal(t)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "failed to encode trip")
+		return
+	}
+	var data any
+	if err := json.Unmarshal(raw, &data); err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "failed to decode response")
 		return
 	}
 
-	// We just proxy the data
 	writeJSON(w, http.StatusOK, contracts.APIResponse{Data: data})
 }
 

@@ -15,6 +15,7 @@ spec:
       containers:
         - name: trip-service
           image: ride-sharing/trip-service
+          imagePullPolicy: Never
           ports:
             - containerPort: 8080
           resources:

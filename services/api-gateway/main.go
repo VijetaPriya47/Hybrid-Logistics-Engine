@@ -9,9 +9,12 @@ import (
 	"syscall"
 	"time"
 
+	"ride-sharing/services/api-gateway/grpc_clients"
 	"ride-sharing/shared/env"
 	"ride-sharing/shared/messaging"
 	"ride-sharing/shared/tracing"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 var (
@@ -22,7 +25,6 @@ var (
 func main() {
 	log.Println("Starting API Gateway")
 
-	// Initialize Tracing
 	tracerCfg := tracing.Config{
 		ServiceName:    "api-gateway",
 		Environment:    env.GetString("ENVIRONMENT", "development"),
@@ -40,7 +42,6 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	// RabbitMQ connection
 	rabbitmq, err := messaging.NewRabbitMQ(rabbitMqURI)
 	if err != nil {
 		log.Fatal(err)
@@ -51,24 +52,113 @@ func main() {
 
 	startDriverSearchExpiredConsumer(rabbitmq)
 
-	mux.Handle("/trip/preview", tracing.WrapHandlerFunc(enableCORS(handleTripPreview), "/trip/preview"))
-	mux.Handle("/trip/start", tracing.WrapHandlerFunc(enableCORS(handleTripStart), "/trip/start"))
-	mux.Handle("/trip/increase-fare", tracing.WrapHandlerFunc(enableCORS(handleIncreaseTripFare), "/trip/increase-fare"))
-	mux.Handle("/trip/update-seats", tracing.WrapHandlerFunc(enableCORS(handleUpdateTripSeats), "/trip/update-seats"))
-	mux.Handle("/trip/", tracing.WrapHandlerFunc(enableCORS(handleGetTripStatus), "/trip/"))
-	mux.Handle("/ws/drivers", tracing.WrapHandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		handleDriversWebSocket(w, r, rabbitmq)
-	}, "/ws/drivers"))
-	mux.Handle("/ws/riders", tracing.WrapHandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	tripGRPC, err := grpc_clients.NewTripServiceClient()
+	if err != nil {
+		log.Fatalf("Failed to create trip service gRPC client: %v", err)
+	}
+	defer tripGRPC.Close()
+
+	driverGRPC, err := grpc_clients.NewDriverServiceClient()
+	if err != nil {
+		log.Fatalf("Failed to create driver service gRPC client: %v", err)
+	}
+	defer driverGRPC.Close()
+
+	platformGRPC, err := grpc_clients.NewPlatformGRPC()
+	if err != nil {
+		log.Fatalf("Failed to create platform-service gRPC client: %v", err)
+	}
+	defer platformGRPC.Close()
+
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
+
+	mux.HandleFunc("/api/auth/login", func(w http.ResponseWriter, r *http.Request) {
+		handleAuthLogin(w, r, platformGRPC.Auth)
+	})
+	mux.HandleFunc("/api/auth/google", func(w http.ResponseWriter, r *http.Request) {
+		handleAuthGoogle(w, r, platformGRPC.Auth)
+	})
+	mux.HandleFunc("/api/auth/forgot-password", func(w http.ResponseWriter, r *http.Request) {
+		handleAuthForgotPassword(w, r, platformGRPC.Auth)
+	})
+	mux.HandleFunc("/api/auth/reset-password", func(w http.ResponseWriter, r *http.Request) {
+		handleAuthResetPassword(w, r, platformGRPC.Auth)
+	})
+
+	mux.HandleFunc("/api/finance/me", func(w http.ResponseWriter, r *http.Request) {
+		handleFinanceMe(w, r, platformGRPC.Finance)
+	})
+	mux.HandleFunc("/api/finance/me/summary", func(w http.ResponseWriter, r *http.Request) {
+		handleFinanceMeSummary(w, r, platformGRPC.Finance)
+	})
+	mux.HandleFunc("/api/trips/history", func(w http.ResponseWriter, r *http.Request) {
+		handleTripHistory(w, r, tripGRPC)
+	})
+	mux.HandleFunc("/api/finance/dashboard/revenue", func(w http.ResponseWriter, r *http.Request) {
+		handleFinanceDashboardRevenue(w, r, platformGRPC.Finance)
+	})
+	mux.HandleFunc("/api/finance/dashboard/regions", func(w http.ResponseWriter, r *http.Request) {
+		handleFinanceDashboardRegions(w, r, platformGRPC.Finance)
+	})
+	mux.HandleFunc("/api/finance/dashboard/categories", func(w http.ResponseWriter, r *http.Request) {
+		handleFinanceDashboardCategories(w, r, platformGRPC.Finance)
+	})
+
+	mux.HandleFunc("/api/admin/system-logs", func(w http.ResponseWriter, r *http.Request) {
+		handleAdminSystemLogs(w, r, platformGRPC.Auth)
+	})
+	mux.HandleFunc("/api/admin/users/business", func(w http.ResponseWriter, r *http.Request) {
+		handleAdminUsersBusiness(w, r, platformGRPC.Auth)
+	})
+	mux.HandleFunc("/api/admin/transactions", func(w http.ResponseWriter, r *http.Request) {
+		handleAdminTransactions(w, r, platformGRPC.Finance)
+	})
+	mux.HandleFunc("/api/admin/users/admin", func(w http.ResponseWriter, r *http.Request) {
+		handleAdminRegisterAdmin(w, r, platformGRPC.Auth)
+	})
+
+	mux.Handle("/trip/preview", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handleTripPreview(w, r, tripGRPC)
+	}))
+	mux.Handle("/trip/start", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handleTripStart(w, r, tripGRPC)
+	}))
+	mux.Handle("/trip/increase-fare", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handleIncreaseTripFare(w, r, tripGRPC)
+	}))
+	mux.Handle("/trip/update-seats", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handleUpdateTripSeats(w, r, tripGRPC)
+	}))
+	mux.Handle("/trip/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handleGetTripStatus(w, r, tripGRPC)
+	}))
+	mux.Handle("/api/trips/book", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handleTripStart(w, r, tripGRPC)
+	}))
+
+	mux.Handle("/ws/drivers", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handleDriversWebSocket(w, r, rabbitmq, driverGRPC)
+	}))
+	mux.Handle("/ws/riders", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		handleRidersWebSocket(w, r, rabbitmq)
-	}, "/ws/riders"))
-	mux.Handle("/webhook/stripe", tracing.WrapHandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.Handle("/webhook/stripe", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		handleStripeWebhook(w, r, rabbitmq)
-	}, "/webhook/stripe"))
+	}))
+
+	stack := chainHTTP([]func(http.Handler) http.Handler{
+		corsMiddleware,
+		jwtMiddleware,
+		rbacMiddleware,
+		auditMiddleware(rabbitmq),
+	}, mux)
 
 	server := &http.Server{
 		Addr:    httpAddr,
-		Handler: mux,
+		Handler: otelhttp.NewHandler(stack, "api-gateway"),
 	}
 
 	serverErrors := make(chan error, 1)

@@ -175,9 +175,30 @@ h2Handler := h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http
 
 ### HTTP Endpoints (non-gRPC)
 
-The Trip Service also exposes plain HTTP routes used internally by the Driver Service:
+The Trip Service also exposes plain HTTP routes for callers that use `TRIP_SERVICE_HTTP_URL` (for example the Driver Service):
 
 | Endpoint | Purpose |
 |---|---|
-| `GET /trips/{tripID}` | Used by Driver Service to validate trip state and current fare during dispatch loops |
-| `POST /fares/update-seats` | Decrements/restores carpool seat counts when a driver accepts or cancels |
+| `GET /trips/{tripID}` | Driver Service validates trip state and current fare during dispatch loops |
+| `POST /fares/update-seats` | Carpool seat updates from services that still use HTTP |
+
+The **API Gateway** uses the shared gRPC client to Trip Service for rider-facing flows, including `GetTrip` and `UpdateFareSeats` RPCs (same port as other Trip Service gRPC methods), so it does not open a new HTTP connection per request for those operations.
+
+## 5. Local Kubernetes Image Freshness
+
+Trip Service's gRPC surface evolves with the shared protobuf contract. In local Kind development, that means the running pod must actually use the freshly built `ride-sharing/trip-service` image whenever new RPCs are added.
+
+The development manifest therefore pins:
+
+```yaml
+image: ride-sharing/trip-service
+imagePullPolicy: Never
+```
+
+Without that setting, Kubernetes can keep serving an older image that predates a new RPC such as `ListMyTrips`, which shows up in the web app as:
+
+```text
+rpc error: code = Unimplemented desc = unknown method ListMyTrips for service trip.TripService
+```
+
+When that happens, rebuild the Trip Service image and restart the deployment so the pod registers the latest generated `TripService` descriptor.
