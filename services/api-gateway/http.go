@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strings"
 	"ride-sharing/services/api-gateway/grpc_clients"
-	"ride-sharing/shared/authjwt"
 	"ride-sharing/shared/contracts"
 	"ride-sharing/shared/env"
 	"ride-sharing/shared/messaging"
@@ -354,10 +353,19 @@ func handleGetTripStatus(w http.ResponseWriter, r *http.Request, tripGRPC *grpc_
 		return
 	}
 
-	sub, role, _, ok := authFromRequest(r)
-	if ok && role == authjwt.RoleCustomer && t.GetUserID() != "" && t.GetUserID() != sub {
-		writeJSONError(w, http.StatusForbidden, "cannot access another user's trip")
-		return
+	sub, _, _, ok := authFromRequest(r)
+	if ok {
+		// Allow access only if caller is rider or assigned driver.
+		// This keeps `GET /trip/{id}` safe while enabling driver status polling.
+		riderID := strings.TrimSpace(t.GetUserID())
+		driverID := ""
+		if d := t.GetDriver(); d != nil {
+			driverID = strings.TrimSpace(d.GetId())
+		}
+		if sub == "" || (riderID != "" && sub != riderID && (driverID == "" || sub != driverID)) {
+			writeJSONError(w, http.StatusForbidden, "cannot access this trip")
+			return
+		}
 	}
 
 	mo := protojson.MarshalOptions{}

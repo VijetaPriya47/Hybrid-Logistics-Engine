@@ -85,7 +85,16 @@ func rbacAllowed(role, path, method string) bool {
 	if strings.HasPrefix(path, "/api/admin/") {
 		return role == authjwt.RoleAdmin
 	}
-	if strings.HasPrefix(path, "/trip/") || path == "/api/trips/book" {
+	// Trip HTTP endpoints:
+	// - Mutations (start/preview/increase/update-seats) are customer-only.
+	// - Read-only `GET /trip/{id}` is allowed for any authed role; ownership is enforced in `handleGetTripStatus`.
+	if strings.HasPrefix(path, "/trip/") {
+		if method == http.MethodGet {
+			return true
+		}
+		return role == authjwt.RoleCustomer
+	}
+	if path == "/api/trips/book" {
 		return role == authjwt.RoleCustomer
 	}
 	return true
